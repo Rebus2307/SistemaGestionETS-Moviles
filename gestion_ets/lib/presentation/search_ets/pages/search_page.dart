@@ -6,6 +6,8 @@ import '../../../injection_container.dart';
 import '../bloc/ets_search_bloc.dart';
 import '../bloc/ets_search_event.dart';
 import '../bloc/ets_search_state.dart';
+import '../../../core/utils/pdf_generator.dart';
+import '../../../presentation/auth/pages/login_page.dart';
 
 // --- WIDGET PRINCIPAL ---
 class SearchPage extends StatelessWidget {
@@ -30,6 +32,19 @@ class _SearchPageView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Buscador de ETS - ESCOM'),
         centerTitle: true,
+        // --- AQUÍ AÑADIMOS EL BOTÓN DE ACCESO ADMINISTRATIVO ---
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.admin_panel_settings),
+            tooltip: 'Acceso Administrativo',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginPage()),
+              );
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -220,8 +235,11 @@ class _ResultsTableWidget extends StatelessWidget {
             ),
             trailing: IconButton(
               icon: const Icon(Icons.picture_as_pdf),
-              onPressed: () {
-                // Pendiente: Aquí implementaremos la exportación a PDF
+              color:
+                  Colors.red[700], // Le damos un toque visual al botón de PDF
+              onPressed: () async {
+                // Mandamos a llamar a nuestro utilitario pasándole la entidad
+                await PdfGenerator.exportarEts(ets);
               },
             ),
           ),
