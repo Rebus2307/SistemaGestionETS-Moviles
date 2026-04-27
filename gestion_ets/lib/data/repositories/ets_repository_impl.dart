@@ -54,4 +54,24 @@ class EtsRepositoryImpl implements EtsRepository {
     );
     await localDataSource.guardarEtsFavorito(modelo);
   }
+
+  // --- NUEVOS MÉTODOS DEL CRUD ADMINISTRATIVO ---
+
+  @override
+  Future<void> saveEts(EtsEntity ets) async {
+    // Simulamos un tiempo de espera de red (como si guardáramos en una API)
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Aquí es donde en el futuro llamarías a tu Data Source:
+    // await remoteDataSource.saveEts(modelo);
+  }
+
+  @override
+  Future<void> deleteEts(String id) async {
+    // Simulamos un tiempo de espera de red
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Aquí es donde en el futuro llamarías a tu Data Source:
+    // await remoteDataSource.deleteEts(id);
+  }
 }

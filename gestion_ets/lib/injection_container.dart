@@ -10,10 +10,19 @@ import 'domain/usecases/get_examenes_usecase.dart';
 import 'presentation/search_ets/bloc/ets_search_bloc.dart';
 
 // --- Imports de Auth ---
-import 'data/repositories/auth_repository_impl.dart'; // <-- NUEVO IMPORT
-import 'domain/repositories/auth_repository.dart'; // <-- NUEVO IMPORT
+import 'data/repositories/auth_repository_impl.dart';
+import 'domain/repositories/auth_repository.dart';
 import 'domain/usecases/login_usecase.dart';
 import 'presentation/auth/bloc/auth_bloc.dart';
+
+// --- Imports de Dashboard ---
+import 'domain/usecases/get_dashboard_stats_usecase.dart';
+import 'presentation/dashboard/bloc/dashboard_bloc.dart';
+
+// --- NUEVOS IMPORTS DE MANAGE ETS (ESTO ES LO QUE FALTABA) ---
+import 'domain/usecases/save_ets_usecase.dart';
+import 'domain/usecases/delete_ets_usecase.dart';
+import 'presentation/manage_ets/bloc/manage_ets_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -21,13 +30,17 @@ Future<void> init() async {
   // --- 1. Casos de Uso (Capa de Dominio) ---
   sl.registerLazySingleton(() => GetExamenesUseCase(sl()));
   sl.registerLazySingleton(() => LoginUseCase(sl()));
+  sl.registerLazySingleton(() => GetDashboardStatsUseCase(sl()));
+
+  // Inyectamos los Casos de Uso del CRUD
+  sl.registerLazySingleton(() => SaveEtsUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteEtsUseCase(sl()));
 
   // --- 2. Repositorios (Capa de Datos) ---
   sl.registerLazySingleton<EtsRepository>(
     () => EtsRepositoryImpl(remoteDataSource: sl(), localDataSource: sl()),
   );
 
-  // <-- Inyectamos el AuthRepository (NUEVO) -->
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl());
 
   // --- 3. Data Sources (Capa de Datos) ---
@@ -43,7 +56,12 @@ Future<void> init() async {
   sl.registerLazySingleton(() => sharedPreferences);
 
   // --- 5. BLoCs (Capa de Presentación) ---
-  // IMPORTANTE: Los BLoCs se registran como Factory, NO como Singleton.
   sl.registerFactory(() => EtsSearchBloc(getExamenesUseCase: sl()));
   sl.registerFactory(() => AuthBloc(loginUseCase: sl()));
+  sl.registerFactory(() => DashboardBloc(getStatsUseCase: sl()));
+
+  // Inyectamos el BLoC para gestionar (Crear/Eliminar) ETS
+  sl.registerFactory(
+    () => ManageEtsBloc(saveEtsUseCase: sl(), deleteEtsUseCase: sl()),
+  );
 }

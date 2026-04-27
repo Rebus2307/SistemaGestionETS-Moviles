@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../injection_container.dart';
+import '../../dashboard/pages/dashboard_page.dart'; // <-- NUEVO IMPORT AL DASHBOARD
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -61,7 +62,7 @@ class _LoginPageViewState extends State<_LoginPageView> {
               ),
             );
           }
-          // Si el login es exitoso, aquí navegaremos al Dashboard
+          // Si el login es exitoso, navegamos al Dashboard
           else if (state is AuthAuthenticated) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -69,7 +70,12 @@ class _LoginPageViewState extends State<_LoginPageView> {
                 backgroundColor: Colors.green,
               ),
             );
-            // Pendiente: Navigator.pushReplacement hacia el Dashboard
+
+            // Navegación hacia el Dashboard reemplazando la pantalla de Login
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const DashboardPage()),
+            );
           }
         },
         builder: (context, state) {

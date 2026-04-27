@@ -11,4 +11,10 @@ abstract class EtsRepository {
 
   // Regla para el módulo administrativo / caché local
   Future<void> guardarEtsFavorito(EtsEntity ets);
+
+  /// Guarda un nuevo ETS o actualiza uno existente
+  Future<void> saveEts(EtsEntity ets);
+
+  /// Elimina un ETS usando su identificador único (ID)
+  Future<void> deleteEts(String id);
 }
