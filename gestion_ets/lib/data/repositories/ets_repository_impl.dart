@@ -8,6 +8,11 @@ class EtsRepositoryImpl implements EtsRepository {
   final EtsRemoteDataSource remoteDataSource;
   final EtsLocalDataSource localDataSource;
 
+  // --- PERSISTENCIA EN MEMORIA ---
+  // Esta lista actuará como nuestra base de datos temporal durante la sesión.
+  final List<EtsEntity> _sessionExamenes = [];
+  bool _datosCargados = false;
+
   EtsRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
@@ -19,31 +24,64 @@ class EtsRepositoryImpl implements EtsRepository {
     String? semestre,
     String? materia,
   }) async {
-    try {
-      // 1. Intentamos obtener datos frescos de la API
-      final modelos = await remoteDataSource.getExamenesDesdeApi(
-        carrera: carrera,
-        semestre: semestre,
-        materia: materia,
-      );
-
-      // 2. Si es exitoso, actualizamos la caché local
-      await localDataSource.cacheExamenes(modelos);
-      return modelos;
-    } catch (e) {
-      // 3. Si falla (no hay internet o error 500), recurrimos a la caché "Offline-first"
+    // Si es la primera vez que entramos, llenamos la lista con datos de la API/Caché
+    if (!_datosCargados) {
       try {
-        final localModelos = await localDataSource.getCachedExamenes();
-        return localModelos;
-      } catch (cacheError) {
-        throw Exception('Error de red y no hay datos guardados localmente.');
+        final modelos = await remoteDataSource.getExamenesDesdeApi(
+          carrera: carrera,
+          semestre: semestre,
+          materia: materia,
+        );
+        _sessionExamenes.addAll(modelos);
+        _datosCargados = true;
+      } catch (e) {
+        try {
+          final localModelos = await localDataSource.getCachedExamenes();
+          _sessionExamenes.addAll(localModelos);
+          _datosCargados = true;
+        } catch (cacheError) {
+          // Si todo falla, empezamos con una lista vacía para no romper el flujo
+          _datosCargados = true;
+        }
       }
+    }
+
+    // Retornamos nuestra lista de sesión filtrada según lo que pida la UI
+    return _sessionExamenes.where((ets) {
+      bool coincide = true;
+      if (materia != null && materia.isNotEmpty) {
+        coincide = ets.materia.toLowerCase().contains(materia.toLowerCase());
+      }
+      return coincide;
+    }).toList();
+  }
+
+  @override
+  Future<void> saveEts(EtsEntity ets) async {
+    // Simulamos latencia de red
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Buscamos si el examen ya existe para actualizarlo (Edit) o agregarlo (Create)
+    final index = _sessionExamenes.indexWhere((e) => e.id == ets.id);
+
+    if (index != -1) {
+      _sessionExamenes[index] = ets;
+    } else {
+      _sessionExamenes.add(ets);
     }
   }
 
   @override
+  Future<void> deleteEts(String id) async {
+    // Simulamos latencia de red
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Eliminamos el elemento de nuestra lista local por su ID
+    _sessionExamenes.removeWhere((ets) => ets.id == id);
+  }
+
+  @override
   Future<void> guardarEtsFavorito(EtsEntity ets) async {
-    // Convertimos la entidad a modelo para poder guardarla
     final modelo = EtsModel(
       id: ets.id,
       materia: ets.materia,
@@ -53,25 +91,5 @@ class EtsRepositoryImpl implements EtsRepository {
       profesor: ets.profesor,
     );
     await localDataSource.guardarEtsFavorito(modelo);
-  }
-
-  // --- NUEVOS MÉTODOS DEL CRUD ADMINISTRATIVO ---
-
-  @override
-  Future<void> saveEts(EtsEntity ets) async {
-    // Simulamos un tiempo de espera de red (como si guardáramos en una API)
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Aquí es donde en el futuro llamarías a tu Data Source:
-    // await remoteDataSource.saveEts(modelo);
-  }
-
-  @override
-  Future<void> deleteEts(String id) async {
-    // Simulamos un tiempo de espera de red
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Aquí es donde en el futuro llamarías a tu Data Source:
-    // await remoteDataSource.deleteEts(id);
   }
 }

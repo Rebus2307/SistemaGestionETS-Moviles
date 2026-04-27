@@ -71,15 +71,20 @@ class _DashboardView extends StatelessWidget {
             return const SizedBox.shrink();
           },
         ),
+        // --- BOTÓN PARA AGREGAR NUEVO ETS (CORREGIDO) ---
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.push(
+          onPressed: () async {
+            // Esperamos a que el usuario regrese de la pantalla del formulario
+            await Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const EtsFormPage()),
-            ).then((_) {
-              // Al regresar del formulario, refrescamos por si se agregó uno nuevo
-              context.read<DashboardBloc>().add(LoadDashboardStatsEvent());
-            });
+            );
+
+            // Verificamos si la pantalla sigue viva antes de usar el context
+            if (!context.mounted) return;
+
+            // Refrescamos el Dashboard de forma segura
+            context.read<DashboardBloc>().add(LoadDashboardStatsEvent());
           },
           label: const Text('Nuevo ETS'),
           icon: const Icon(Icons.add),
@@ -154,7 +159,7 @@ class _DashboardView extends StatelessWidget {
 
           const SizedBox(height: 32),
 
-          // 3. LISTA DE GESTIÓN (NUEVO)
+          // 3. LISTA DE GESTIÓN
           const Text(
             'Lista de Exámenes',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -208,7 +213,9 @@ class _DashboardView extends StatelessWidget {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
+              // Disparamos el evento al BLoC
               context.read<ManageEtsBloc>().add(DeleteEtsEvent(ets.id));
+              // Cerramos el diálogo
               Navigator.pop(dialogContext);
             },
             child: const Text('Eliminar'),
