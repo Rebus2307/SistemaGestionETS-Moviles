@@ -1,10 +1,23 @@
-abstract class AuthRepository {
-  /// Intenta iniciar sesión con un usuario y contraseña.
-  Future<bool> login({required String username, required String password});
+import '../entities/user_entity.dart';
 
-  /// Cierra la sesión del usuario actual.
+abstract class AuthRepository {
+  /// Registra un nuevo usuario
+  Future<UserEntity> signup({
+    required String email,
+    required String password,
+    required String fullName,
+    required String role,
+  });
+
+  /// Intenta iniciar sesión con email y contraseña
+  Future<UserEntity> login({required String email, required String password});
+
+  /// Obtiene el usuario actual autenticado
+  Future<UserEntity?> getCurrentUser();
+
+  /// Cierra la sesión del usuario actual
   Future<void> logout();
 
-  /// Verifica si hay una sesión activa guardada en el dispositivo.
-  Future<bool> checkSession();
+  /// Verifica si hay una sesión activa
+  Future<bool> isAuthenticated();
 }

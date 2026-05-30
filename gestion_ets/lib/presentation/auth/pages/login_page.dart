@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../injection_container.dart';
-import '../../dashboard/pages/dashboard_page.dart'; // <-- NUEVO IMPORT AL DASHBOARD
+import '../../../domain/repositories/auth_repository.dart';
+import '../../admin/pages/admin_page.dart';
+import '../../dashboard/pages/dashboard_page.dart';
+import '../../search_ets/pages/search_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -30,30 +33,34 @@ class _LoginPageView extends StatefulWidget {
 
 class _LoginPageViewState extends State<_LoginPageView> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // Variable pura de UI para mostrar/ocultar la contraseña
   bool _ocultarPassword = true;
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    if (_formKey.currentState!.validate()) {
+      context.read<AuthBloc>().add(
+        LoginRequestedEvent(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Acceso Administrativo'),
-        centerTitle: true,
-      ),
-      // BlocConsumer reacciona a los cambios de estado de nuestro AuthBloc
+      appBar: AppBar(title: const Text('Iniciar Sesión'), centerTitle: true),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
-          // Si hay error, mostramos un Snackbar rojo
           if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -61,21 +68,8 @@ class _LoginPageViewState extends State<_LoginPageView> {
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
-          }
-          // Si el login es exitoso, navegamos al Dashboard
-          else if (state is AuthAuthenticated) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('¡Bienvenido Administrador!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-
-            // Navegación hacia el Dashboard reemplazando la pantalla de Login
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const DashboardPage()),
-            );
+          } else if (state is AuthAuthenticated) {
+            _navigateByRole(context);
           }
         },
         builder: (context, state) {
@@ -88,32 +82,42 @@ class _LoginPageViewState extends State<_LoginPageView> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Ícono representativo
                     Icon(
-                      Icons.admin_panel_settings,
+                      Icons.lock_outline,
                       size: 100,
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     const SizedBox(height: 32),
-
-                    // Campo de Usuario
+                    const Text(
+                      'Gestión ETS',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    // --- CAMPO DE EMAIL ---
                     TextFormField(
-                      controller: _usernameController,
+                      controller: _emailController,
                       decoration: const InputDecoration(
-                        labelText: 'Usuario',
-                        prefixIcon: Icon(Icons.person),
+                        labelText: 'Correo Electrónico',
+                        prefixIcon: Icon(Icons.email),
                         border: OutlineInputBorder(),
                       ),
+                      keyboardType: TextInputType.emailAddress,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Por favor ingresa tu usuario';
+                          return 'Por favor ingresa tu correo';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Por favor ingresa un correo válido';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
-
-                    // Campo de Contraseña
+                    // --- CAMPO DE CONTRASEÑA ---
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _ocultarPassword,
@@ -128,7 +132,6 @@ class _LoginPageViewState extends State<_LoginPageView> {
                                 : Icons.visibility_off,
                           ),
                           onPressed: () {
-                            // Usamos setState solo para esto, ya que es lógica pura de la vista (UI), no de negocio
                             setState(() {
                               _ocultarPassword = !_ocultarPassword;
                             });
@@ -139,28 +142,18 @@ class _LoginPageViewState extends State<_LoginPageView> {
                         if (value == null || value.isEmpty) {
                           return 'Por favor ingresa tu contraseña';
                         }
+                        if (value.length < 6) {
+                          return 'La contraseña debe tener al menos 6 caracteres';
+                        }
                         return null;
                       },
                     ),
                     const SizedBox(height: 32),
-
-                    // Botón de Inicio de Sesión
+                    // --- BOTÓN DE INICIAR SESIÓN ---
                     SizedBox(
                       height: 50,
                       child: FilledButton(
-                        onPressed: state is AuthLoading
-                            ? null // Deshabilita el botón si está cargando
-                            : () {
-                                if (_formKey.currentState!.validate()) {
-                                  // Disparamos el evento al BLoC
-                                  context.read<AuthBloc>().add(
-                                    LoginRequestedEvent(
-                                      username: _usernameController.text,
-                                      password: _passwordController.text,
-                                    ),
-                                  );
-                                }
-                              },
+                        onPressed: state is AuthLoading ? null : _handleLogin,
                         child: state is AuthLoading
                             ? const CircularProgressIndicator(
                                 color: Colors.white,
@@ -179,5 +172,43 @@ class _LoginPageViewState extends State<_LoginPageView> {
         },
       ),
     );
+  }
+
+  Future<void> _navigateByRole(BuildContext context) async {
+    try {
+      final authRepository = sl<AuthRepository>();
+      final user = await authRepository.getCurrentUser();
+
+      if (user != null) {
+        if (user.isAdmin) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminPage()),
+          );
+        } else if (user.isProfesorCoordinador) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardPage()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const SearchPage()),
+          );
+        }
+      } else {
+        // Si no obtiene el usuario, ir a SearchPage por defecto
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const SearchPage()),
+        );
+      }
+    } catch (e) {
+      // Si hay error, simplemente ir a SearchPage
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const SearchPage()),
+      );
+    }
   }
 }

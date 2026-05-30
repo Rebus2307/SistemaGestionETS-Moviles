@@ -15,7 +15,9 @@ class SaveEtsUseCase {
     }
 
     // Regla de negocio: Validar campos vacíos
-    if (ets.materia.isEmpty || ets.salon.isEmpty || ets.profesor.isEmpty) {
+    if (ets.materia.isEmpty ||
+        ets.salon.isEmpty ||
+        ets.profesorNombre.isEmpty) {
       throw Exception('Todos los campos de texto son obligatorios.');
     }
 

@@ -6,7 +6,7 @@ import '../../../injection_container.dart';
 import '../../manage_ets/bloc/manage_ets_bloc.dart';
 import '../../manage_ets/bloc/manage_ets_event.dart';
 import '../../manage_ets/bloc/manage_ets_state.dart';
-import '../../manage_ets/pages/ets_form_page.dart';
+import '../../manage_ets/pages/crear_examen_page.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../bloc/dashboard_event.dart';
 import '../bloc/dashboard_state.dart';
@@ -71,13 +71,13 @@ class _DashboardView extends StatelessWidget {
             return const SizedBox.shrink();
           },
         ),
-        // --- BOTÓN PARA AGREGAR NUEVO ETS (CORREGIDO) ---
+        // --- BOTÓN PARA CREAR NUEVO EXAMEN ---
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () async {
             // Esperamos a que el usuario regrese de la pantalla del formulario
             await Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const EtsFormPage()),
+              MaterialPageRoute(builder: (context) => const CrearExamenPage()),
             );
 
             // Verificamos si la pantalla sigue viva antes de usar el context
@@ -86,7 +86,7 @@ class _DashboardView extends StatelessWidget {
             // Refrescamos el Dashboard de forma segura
             context.read<DashboardBloc>().add(LoadDashboardStatsEvent());
           },
-          label: const Text('Nuevo ETS'),
+          label: const Text('Nuevo Examen'),
           icon: const Icon(Icons.add),
         ),
       ),
@@ -182,7 +182,7 @@ class _DashboardView extends StatelessWidget {
                     leading: CircleAvatar(child: Text(ets.turno)),
                     title: Text(ets.materia),
                     subtitle: Text(
-                      'Salón: ${ets.salon} | Prof: ${ets.profesor}',
+                      'Salón: ${ets.salon} | Prof: ${ets.profesorNombre}',
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.red),

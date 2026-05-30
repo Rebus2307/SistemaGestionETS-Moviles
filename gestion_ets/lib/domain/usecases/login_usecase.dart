@@ -1,4 +1,5 @@
 import '../repositories/auth_repository.dart';
+import '../entities/user_entity.dart';
 
 class LoginUseCase {
   final AuthRepository repository;
@@ -6,8 +7,8 @@ class LoginUseCase {
   // Inyectamos el repositorio
   LoginUseCase(this.repository);
 
-  Future<bool> call({
-    required String username,
+  Future<UserEntity> call({
+    required String email,
     required String password,
   }) async {
     // Aquí podríamos agregar lógica pura de negocio, por ejemplo:
@@ -17,6 +18,6 @@ class LoginUseCase {
       throw Exception('La contraseña debe tener al menos 6 caracteres.');
     }
 
-    return await repository.login(username: username, password: password);
+    return await repository.login(email: email, password: password);
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../../../domain/entities/ets_entity.dart';
+import '../../../domain/repositories/auth_repository.dart';
 import '../../../injection_container.dart';
 import '../bloc/manage_ets_bloc.dart';
 import '../bloc/manage_ets_event.dart';
@@ -22,10 +23,21 @@ class _EtsFormPageState extends State<EtsFormPage> {
 
   late TextEditingController _materiaController;
   late TextEditingController _salonController;
-  late TextEditingController _profesorController;
+  late TextEditingController _profesorNombreController;
 
   DateTime _fechaSeleccionada = DateTime.now().add(const Duration(days: 7));
-  String _turnoSeleccionado = 'M';
+  String _turnoSeleccionado = 'Mañana';
+  String? _carreraSeleccionada;
+  int? _semestreSeleccionado;
+
+  final List<String> _carreras = [
+    'Ingeniería en Sistemas',
+    'Ingeniería Civil',
+    'Administración',
+    'Contabilidad',
+  ];
+  final List<int> _semestres = [1, 2, 3, 4, 5, 6, 7, 8];
+  final List<String> _turnos = ['Mañana', 'Tarde', 'Noche'];
 
   @override
   void initState() {
@@ -36,13 +48,18 @@ class _EtsFormPageState extends State<EtsFormPage> {
     _salonController = TextEditingController(
       text: widget.etsParaEditar?.salon ?? '',
     );
-    _profesorController = TextEditingController(
-      text: widget.etsParaEditar?.profesor ?? '',
+    _profesorNombreController = TextEditingController(
+      text: widget.etsParaEditar?.profesorNombre ?? '',
     );
 
     if (widget.etsParaEditar != null) {
       _fechaSeleccionada = widget.etsParaEditar!.fecha;
       _turnoSeleccionado = widget.etsParaEditar!.turno;
+      _carreraSeleccionada = widget.etsParaEditar!.carrera;
+      _semestreSeleccionado = widget.etsParaEditar!.semestre;
+    } else {
+      _carreraSeleccionada = 'Ingeniería en Sistemas';
+      _semestreSeleccionado = 6;
     }
   }
 
@@ -50,7 +67,7 @@ class _EtsFormPageState extends State<EtsFormPage> {
   void dispose() {
     _materiaController.dispose();
     _salonController.dispose();
-    _profesorController.dispose();
+    _profesorNombreController.dispose();
     super.dispose();
   }
 
@@ -101,6 +118,46 @@ class _EtsFormPageState extends State<EtsFormPage> {
                     ),
                     const SizedBox(height: 16),
 
+                    DropdownButtonFormField<String>(
+                      value: _carreraSeleccionada,
+                      decoration: const InputDecoration(
+                        labelText: 'Carrera',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _carreras.map((carrera) {
+                        return DropdownMenuItem(
+                          value: carrera,
+                          child: Text(carrera),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _carreraSeleccionada = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    DropdownButtonFormField<int>(
+                      value: _semestreSeleccionado,
+                      decoration: const InputDecoration(
+                        labelText: 'Semestre',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _semestres.map((semestre) {
+                        return DropdownMenuItem(
+                          value: semestre,
+                          child: Text('Semestre $semestre'),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _semestreSeleccionado = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
                     ListTile(
                       title: const Text('Fecha del Examen'),
                       subtitle: Text(
@@ -124,16 +181,19 @@ class _EtsFormPageState extends State<EtsFormPage> {
                     const SizedBox(height: 16),
 
                     DropdownButtonFormField<String>(
-                      initialValue:
-                          _turnoSeleccionado, // Corregido de 'value' a 'initialValue'
+                      value: _turnoSeleccionado,
                       decoration: const InputDecoration(
                         labelText: 'Turno',
                         border: OutlineInputBorder(),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'M', child: Text('Matutino')),
-                        DropdownMenuItem(value: 'V', child: Text('Vespertino')),
-                      ],
+                      items: _turnos
+                          .map(
+                            (turno) => DropdownMenuItem(
+                              value: turno,
+                              child: Text(turno),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (v) {
                         if (v != null) {
                           setState(() {
@@ -156,11 +216,12 @@ class _EtsFormPageState extends State<EtsFormPage> {
                     const SizedBox(height: 16),
 
                     TextFormField(
-                      controller: _profesorController,
+                      controller: _profesorNombreController,
                       decoration: const InputDecoration(
-                        labelText: 'Profesor',
+                        labelText: 'Nombre del Profesor',
                         border: OutlineInputBorder(),
                       ),
+                      readOnly: true,
                       validator: (v) =>
                           (v == null || v.isEmpty) ? 'Campo obligatorio' : null,
                     ),
@@ -172,21 +233,49 @@ class _EtsFormPageState extends State<EtsFormPage> {
                       child: FilledButton(
                         onPressed: state is ManageEtsLoading
                             ? null
-                            : () {
+                            : () async {
                                 if (_formKey.currentState!.validate()) {
-                                  final nuevoEts = EtsEntity(
-                                    id:
-                                        widget.etsParaEditar?.id ??
-                                        DateTime.now().toIso8601String(),
-                                    materia: _materiaController.text,
-                                    fecha: _fechaSeleccionada,
-                                    turno: _turnoSeleccionado,
-                                    salon: _salonController.text,
-                                    profesor: _profesorController.text,
-                                  );
-                                  context.read<ManageEtsBloc>().add(
-                                    SaveEtsEvent(nuevoEts),
-                                  );
+                                  try {
+                                    final authRepository = sl<AuthRepository>();
+                                    final user = await authRepository
+                                        .getCurrentUser();
+
+                                    if (user != null && mounted) {
+                                      final nuevoEts = EtsEntity(
+                                        id:
+                                            widget.etsParaEditar?.id ??
+                                            DateTime.now().toIso8601String(),
+                                        materia: _materiaController.text,
+                                        fecha: _fechaSeleccionada,
+                                        turno: _turnoSeleccionado,
+                                        salon: _salonController.text,
+                                        profesorId: user.id,
+                                        profesorNombre: user.fullName,
+                                        carrera: _carreraSeleccionada ?? 'ISC',
+                                        semestre: _semestreSeleccionado ?? 6,
+                                        createdAt:
+                                            widget.etsParaEditar?.createdAt ??
+                                            DateTime.now(),
+                                        updatedAt: DateTime.now(),
+                                      );
+                                      if (mounted) {
+                                        context.read<ManageEtsBloc>().add(
+                                          SaveEtsEvent(nuevoEts),
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
                                 }
                               },
                         child: state is ManageEtsLoading

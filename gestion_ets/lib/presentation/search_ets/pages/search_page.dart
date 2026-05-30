@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../domain/entities/ets_entity.dart';
+import '../../../domain/repositories/auth_repository.dart';
 import '../../../injection_container.dart';
 import '../bloc/ets_search_bloc.dart';
 import '../bloc/ets_search_event.dart';
 import '../bloc/ets_search_state.dart';
 import '../../../core/utils/pdf_generator.dart';
-import '../../../presentation/auth/pages/login_page.dart';
+import '../../auth/pages/login_page.dart';
 
 // --- WIDGET PRINCIPAL ---
 class SearchPage extends StatelessWidget {
@@ -23,8 +24,33 @@ class SearchPage extends StatelessWidget {
 }
 
 // --- VISTA REACTIVA ---
-class _SearchPageView extends StatelessWidget {
+class _SearchPageView extends StatefulWidget {
   const _SearchPageView();
+
+  @override
+  State<_SearchPageView> createState() => _SearchPageViewState();
+}
+
+class _SearchPageViewState extends State<_SearchPageView> {
+  Future<void> _handleLogout() async {
+    try {
+      final authRepository = sl<AuthRepository>();
+      await authRepository.logout();
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al cerrar sesión: $e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,17 +58,11 @@ class _SearchPageView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Buscador de ETS - ESCOM'),
         centerTitle: true,
-        // --- AQUÍ AÑADIMOS EL BOTÓN DE ACCESO ADMINISTRATIVO ---
         actions: [
           IconButton(
-            icon: const Icon(Icons.admin_panel_settings),
-            tooltip: 'Acceso Administrativo',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginPage()),
-              );
-            },
+            icon: const Icon(Icons.logout),
+            tooltip: 'Cerrar sesión',
+            onPressed: _handleLogout,
           ),
         ],
       ),

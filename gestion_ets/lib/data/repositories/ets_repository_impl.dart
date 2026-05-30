@@ -8,11 +8,6 @@ class EtsRepositoryImpl implements EtsRepository {
   final EtsRemoteDataSource remoteDataSource;
   final EtsLocalDataSource localDataSource;
 
-  // --- PERSISTENCIA EN MEMORIA ---
-  // Esta lista actuará como nuestra base de datos temporal durante la sesión.
-  final List<EtsEntity> _sessionExamenes = [];
-  bool _datosCargados = false;
-
   EtsRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
@@ -24,60 +19,135 @@ class EtsRepositoryImpl implements EtsRepository {
     String? semestre,
     String? materia,
   }) async {
-    // Si es la primera vez que entramos, llenamos la lista con datos de la API/Caché
-    if (!_datosCargados) {
+    try {
+      // Hacer la consulta a Supabase con los filtros
+      final modelos = await remoteDataSource.getExamenes(
+        carrera: carrera,
+        semestre: semestre,
+        materia: materia,
+      );
+
+      // Cachear los resultados para uso offline
+      await localDataSource.cacheExamenes(modelos);
+
+      return modelos;
+    } catch (e) {
       try {
-        final modelos = await remoteDataSource.getExamenesDesdeApi(
-          carrera: carrera,
-          semestre: semestre,
-          materia: materia,
-        );
-        _sessionExamenes.addAll(modelos);
-        _datosCargados = true;
-      } catch (e) {
-        try {
-          final localModelos = await localDataSource.getCachedExamenes();
-          _sessionExamenes.addAll(localModelos);
-          _datosCargados = true;
-        } catch (cacheError) {
-          // Si todo falla, empezamos con una lista vacía para no romper el flujo
-          _datosCargados = true;
-        }
+        // Si falla la consulta remota, intenta usar el caché
+        final localModelos = await localDataSource.getCachedExamenes();
+        return localModelos;
+      } catch (cacheError) {
+        // Si todo falla, retorna lista vacía
+        throw Exception('Error al obtener exámenes: $e');
       }
     }
+  }
 
-    // Retornamos nuestra lista de sesión filtrada según lo que pida la UI
-    return _sessionExamenes.where((ets) {
-      bool coincide = true;
-      if (materia != null && materia.isNotEmpty) {
-        coincide = ets.materia.toLowerCase().contains(materia.toLowerCase());
-      }
-      return coincide;
-    }).toList();
+  @override
+  Future<List<EtsEntity>> getExamenesByProfesor(String profesorId) async {
+    try {
+      final modelos = await remoteDataSource.getExamenesByProfesor(profesorId);
+      return modelos;
+    } catch (e) {
+      throw Exception('Error al obtener exámenes del profesor: $e');
+    }
+  }
+
+  @override
+  Future<EtsEntity> crearExamen({
+    required String materia,
+    required DateTime fecha,
+    required String turno,
+    required String salon,
+    required String carrera,
+    required int semestre,
+    required String profesorId,
+    required String profesorNombre,
+  }) async {
+    try {
+      final modelo = await remoteDataSource.crearExamen(
+        materia: materia,
+        fecha: fecha,
+        turno: turno,
+        salon: salon,
+        carrera: carrera,
+        semestre: semestre,
+        profesorId: profesorId,
+        profesorNombre: profesorNombre,
+      );
+
+      return modelo;
+    } catch (e) {
+      throw Exception('Error al crear examen: $e');
+    }
+  }
+
+  @override
+  Future<EtsEntity> actualizarExamen(EtsEntity examen) async {
+    try {
+      final modelo = examen as EtsModel;
+      final resultado = await remoteDataSource.actualizarExamen(modelo);
+      return resultado;
+    } catch (e) {
+      throw Exception('Error al actualizar examen: $e');
+    }
+  }
+
+  @override
+  Future<void> eliminarExamen(String id) async {
+    try {
+      await remoteDataSource.eliminarExamen(id);
+    } catch (e) {
+      throw Exception('Error al eliminar examen: $e');
+    }
   }
 
   @override
   Future<void> saveEts(EtsEntity ets) async {
-    // Simulamos latencia de red
-    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      final modelo = EtsModel(
+        id: ets.id,
+        materia: ets.materia,
+        fecha: ets.fecha,
+        turno: ets.turno,
+        salon: ets.salon,
+        profesorId: ets.profesorId,
+        profesorNombre: ets.profesorNombre,
+        carrera: ets.carrera,
+        semestre: ets.semestre,
+        createdAt: ets.createdAt,
+        updatedAt: ets.updatedAt,
+      );
 
-    // Buscamos si el examen ya existe para actualizarlo (Edit) o agregarlo (Create)
-    final index = _sessionExamenes.indexWhere((e) => e.id == ets.id);
-
-    if (index != -1) {
-      _sessionExamenes[index] = ets;
-    } else {
-      _sessionExamenes.add(ets);
+      // Verificar si es creación o actualización
+      if (ets.id.isEmpty) {
+        // Crear en Supabase
+        await remoteDataSource.crearExamen(
+          materia: modelo.materia,
+          fecha: modelo.fecha,
+          turno: modelo.turno,
+          salon: modelo.salon,
+          carrera: modelo.carrera,
+          semestre: modelo.semestre,
+          profesorId: modelo.profesorId,
+          profesorNombre: modelo.profesorNombre,
+        );
+      } else {
+        // Actualizar en Supabase
+        await remoteDataSource.actualizarExamen(modelo);
+      }
+    } catch (e) {
+      throw Exception('Error al guardar examen: $e');
     }
   }
 
   @override
   Future<void> deleteEts(String id) async {
-    // Simulamos latencia de red
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    // Eliminamos el elemento de nuestra lista local por su ID
-    _sessionExamenes.removeWhere((ets) => ets.id == id);
+    try {
+      await remoteDataSource.eliminarExamen(id);
+    } catch (e) {
+      throw Exception('Error al eliminar examen: $e');
+    }
   }
 
   @override
@@ -88,7 +158,12 @@ class EtsRepositoryImpl implements EtsRepository {
       fecha: ets.fecha,
       turno: ets.turno,
       salon: ets.salon,
-      profesor: ets.profesor,
+      profesorId: ets.profesorId,
+      profesorNombre: ets.profesorNombre,
+      carrera: ets.carrera,
+      semestre: ets.semestre,
+      createdAt: ets.createdAt,
+      updatedAt: ets.updatedAt,
     );
     await localDataSource.guardarEtsFavorito(modelo);
   }

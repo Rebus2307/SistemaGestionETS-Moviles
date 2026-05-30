@@ -1,32 +1,48 @@
+import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../datasources/auth_remote_data_source.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
+  final AuthRemoteDataSource remoteDataSource;
+
+  AuthRepositoryImpl({required this.remoteDataSource});
+
   @override
-  Future<bool> login({
-    required String username,
+  Future<UserEntity> signup({
+    required String email,
+    required String password,
+    required String fullName,
+    required String role,
+  }) async {
+    return await remoteDataSource.signup(
+      email: email,
+      password: password,
+      fullName: fullName,
+      role: role,
+    );
+  }
+
+  @override
+  Future<UserEntity> login({
+    required String email,
     required String password,
   }) async {
-    // Simulamos un retraso de red de 2 segundos para que puedas ver
-    // la animación de carga (el circulito) en tu botón de Login.
-    await Future.delayed(const Duration(seconds: 2));
+    return await remoteDataSource.login(email: email, password: password);
+  }
 
-    // Validación "quemada" (hardcoded) para nuestra simulación
-    // Solo dejaremos pasar a este usuario
-    if (username == 'admin' && password == '123456') {
-      return true; // Login exitoso
-    } else {
-      return false; // Credenciales incorrectas
-    }
+  @override
+  Future<UserEntity?> getCurrentUser() async {
+    return await remoteDataSource.getCurrentUser();
   }
 
   @override
   Future<void> logout() async {
-    // Pendiente: Lógica para borrar la sesión del caché cuando hagamos el botón de salir
+    return await remoteDataSource.logout();
   }
 
   @override
-  Future<bool> checkSession() async {
-    // Pendiente: Lógica para leer si el usuario ya había entrado antes
-    return false;
+  Future<bool> isAuthenticated() async {
+    final user = await remoteDataSource.getCurrentUser();
+    return user != null;
   }
 }

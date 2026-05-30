@@ -58,7 +58,7 @@ class PdfGenerator {
                 ),
                 _buildFilaDato('Turno:', ets.turno),
                 _buildFilaDato('Edificio / Salón:', ets.salon),
-                _buildFilaDato('Profesor Evaluador:', ets.profesor),
+                _buildFilaDato('Profesor Evaluador:', ets.profesorNombre),
 
                 pw.Spacer(),
 
