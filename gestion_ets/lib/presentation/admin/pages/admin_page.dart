@@ -5,6 +5,8 @@ import '../../../domain/entities/user_entity.dart';
 import '../../auth/pages/login_page.dart';
 import '../../manage_ets/pages/crear_examen_page.dart';
 import './create_user_page.dart';
+// --- IMPORT DEL PERFIL ---
+import '../../profile/pages/profile_page.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -84,7 +86,25 @@ class _AdminPageState extends State<AdminPage> {
               ),
             ),
           ),
-          IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
+          // --- NUEVO BOTÓN DE PERFIL ---
+          IconButton(
+            icon: const Icon(Icons.account_circle),
+            tooltip: 'Mi Perfil',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfilePage(),
+                ),
+              );
+            },
+          ),
+          // --- BOTÓN DE LOGOUT ---
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Cerrar sesión',
+            onPressed: _handleLogout,
+          ),
         ],
       ),
       body: _isLoading

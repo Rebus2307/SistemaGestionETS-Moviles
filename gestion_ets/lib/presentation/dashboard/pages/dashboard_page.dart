@@ -10,6 +10,8 @@ import '../../manage_ets/pages/crear_examen_page.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../bloc/dashboard_event.dart';
 import '../bloc/dashboard_state.dart';
+// --- IMPORT DEL PERFIL ---
+import '../../profile/pages/profile_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -53,8 +55,23 @@ class _DashboardView extends StatelessWidget {
           title: const Text('Panel de Control'),
           centerTitle: true,
           actions: [
+            // --- NUEVO BOTÓN DE PERFIL ---
+            IconButton(
+              icon: const Icon(Icons.account_circle),
+              tooltip: 'Mi Perfil',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfilePage(),
+                  ),
+                );
+              },
+            ),
+            // --- BOTÓN DE CERRAR SESIÓN ---
             IconButton(
               icon: const Icon(Icons.logout),
+              tooltip: 'Cerrar sesión',
               onPressed: () => Navigator.of(context).pop(),
             ),
           ],

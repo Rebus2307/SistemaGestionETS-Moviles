@@ -9,6 +9,8 @@ import '../bloc/ets_search_event.dart';
 import '../bloc/ets_search_state.dart';
 import '../../../core/utils/pdf_generator.dart';
 import '../../auth/pages/login_page.dart';
+// --- IMPORT DEL PERFIL ---
+import '../../profile/pages/profile_page.dart';
 
 // --- WIDGET PRINCIPAL ---
 class SearchPage extends StatelessWidget {
@@ -59,6 +61,20 @@ class _SearchPageViewState extends State<_SearchPageView> {
         title: const Text('Buscador de ETS - ESCOM'),
         centerTitle: true,
         actions: [
+          // --- NUEVO BOTÓN DE PERFIL ---
+          IconButton(
+            icon: const Icon(Icons.account_circle),
+            tooltip: 'Mi Perfil',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfilePage(),
+                ),
+              );
+            },
+          ),
+          // --- BOTÓN DE CERRAR SESIÓN ---
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Cerrar sesión',
