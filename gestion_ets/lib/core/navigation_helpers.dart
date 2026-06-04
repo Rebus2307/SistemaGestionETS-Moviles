@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../domain/entities/user_entity.dart';
-import '../presentation/auth/pages/login_page.dart';
 import '../presentation/dashboard/pages/dashboard_page.dart';
 import '../presentation/search_ets/pages/search_page.dart';
 
@@ -37,7 +36,6 @@ Widget getHomePageByRole(UserEntity user) {
 
 /// Verifica si el usuario tiene permisos para acceder a una ruta
 bool canAccessRoute(UserEntity user, String routeName) {
-  const adminOnlyRoutes = ['admin', 'dashboard', 'users', 'reports'];
   const profesorOnlyRoutes = ['dashboard', 'manage_ets'];
   const alumnoOnlyRoutes = ['search'];
 

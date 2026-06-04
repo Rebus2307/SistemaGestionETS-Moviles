@@ -6,16 +6,28 @@ class UserModel extends UserEntity {
     required super.email,
     required super.fullName,
     required super.role,
-    required super.createdAt,
+    super.createdAt,
+    super.avatarUrl,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      fullName: json['full_name'] as String,
-      role: _parseRole(json['role'] as String),
-      createdAt: DateTime.parse(json['created_at'] as String),
+      // Si el id o el correo vienen nulos (imposible, pero por seguridad), ponemos ''
+      id: json['id'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+
+      // Si no tiene nombre, ponemos 'Usuario' por defecto
+      fullName: json['full_name'] as String? ?? 'Usuario',
+
+      role: _parseRole(json['role'] as String? ?? 'alumno'),
+
+      // Evitamos el crasheo de created_at poniéndole la fecha actual si viene nulo
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+
+      // Aceptamos el nulo de la foto sin explotar
+      avatarUrl: json['avatar_url'] as String?,
     );
   }
 
@@ -25,7 +37,8 @@ class UserModel extends UserEntity {
       'email': email,
       'full_name': fullName,
       'role': _roleToString(role),
-      'created_at': createdAt.toIso8601String(),
+      if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
     };
   }
 
@@ -34,6 +47,7 @@ class UserModel extends UserEntity {
       case 'alumno':
         return UserRole.alumno;
       case 'profesor_coordinador':
+      case 'profesor': // Agregado por si guardaste el rol solo como 'profesor'
         return UserRole.profesorCoordinador;
       case 'administrador':
         return UserRole.administrador;

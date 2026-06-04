@@ -7,18 +7,20 @@ class UserEntity extends Equatable {
   final String email;
   final String fullName;
   final UserRole role;
-  final DateTime createdAt;
+  final DateTime? createdAt; // Lo hacemos opcional por si la BD no lo envía
+  final String? avatarUrl; // NUEVO: Campo opcional para la foto de perfil
 
   const UserEntity({
     required this.id,
     required this.email,
     required this.fullName,
     required this.role,
-    required this.createdAt,
+    this.createdAt,
+    this.avatarUrl,
   });
 
   @override
-  List<Object?> get props => [id, email, fullName, role, createdAt];
+  List<Object?> get props => [id, email, fullName, role, createdAt, avatarUrl];
 
   // Métodos de ayuda para verificar rol
   bool get isAdmin => role == UserRole.administrador;
