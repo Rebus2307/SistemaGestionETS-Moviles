@@ -119,7 +119,7 @@ class _EtsFormPageState extends State<EtsFormPage> {
                     const SizedBox(height: 16),
 
                     DropdownButtonFormField<String>(
-                      value: _carreraSeleccionada,
+                      initialValue: _carreraSeleccionada,
                       decoration: const InputDecoration(
                         labelText: 'Carrera',
                         border: OutlineInputBorder(),
@@ -139,7 +139,7 @@ class _EtsFormPageState extends State<EtsFormPage> {
                     const SizedBox(height: 16),
 
                     DropdownButtonFormField<int>(
-                      value: _semestreSeleccionado,
+                      initialValue: _semestreSeleccionado,
                       decoration: const InputDecoration(
                         labelText: 'Semestre',
                         border: OutlineInputBorder(),
@@ -181,7 +181,7 @@ class _EtsFormPageState extends State<EtsFormPage> {
                     const SizedBox(height: 16),
 
                     DropdownButtonFormField<String>(
-                      value: _turnoSeleccionado,
+                      initialValue: _turnoSeleccionado,
                       decoration: const InputDecoration(
                         labelText: 'Turno',
                         border: OutlineInputBorder(),
@@ -240,7 +240,10 @@ class _EtsFormPageState extends State<EtsFormPage> {
                                     final user = await authRepository
                                         .getCurrentUser();
 
-                                    if (user != null && mounted) {
+                                    // --- CORRECCIÓN: Validación en el context del Builder ---
+                                    if (!context.mounted) return;
+
+                                    if (user != null) {
                                       final nuevoEts = EtsEntity(
                                         id:
                                             widget.etsParaEditar?.id ??
@@ -258,23 +261,21 @@ class _EtsFormPageState extends State<EtsFormPage> {
                                             DateTime.now(),
                                         updatedAt: DateTime.now(),
                                       );
-                                      if (mounted) {
-                                        context.read<ManageEtsBloc>().add(
-                                          SaveEtsEvent(nuevoEts),
-                                        );
-                                      }
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error: $e'),
-                                          backgroundColor: Colors.red,
-                                        ),
+
+                                      context.read<ManageEtsBloc>().add(
+                                        SaveEtsEvent(nuevoEts),
                                       );
                                     }
+                                  } catch (e) {
+                                    // --- CORRECCIÓN: Validación en el context del Builder ---
+                                    if (!context.mounted) return;
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
                                   }
                                 }
                               },

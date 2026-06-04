@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // <-- NUEVO IMPORT
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../injection_container.dart';
 import '../../../domain/repositories/auth_repository.dart';
@@ -31,8 +31,7 @@ class _CrearExamenPageView extends StatefulWidget {
 class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
   final _formKey = GlobalKey<FormState>();
   final _materiaController = TextEditingController();
-  
-  // --- NUEVAS VARIABLES DE ESTADO PARA CATÁLOGOS ---
+
   DateTime? _fechaSeleccionada;
   String? _turnoSeleccionado;
   int? _semestreSeleccionado;
@@ -49,7 +48,7 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
   @override
   void initState() {
     super.initState();
-    _cargarCatalogos(); // <-- Cargamos los datos de Supabase al abrir la pantalla
+    _cargarCatalogos();
   }
 
   @override
@@ -58,12 +57,10 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
     super.dispose();
   }
 
-  // --- FUNCIÓN PARA TRAER LOS CATÁLOGOS DE SUPABASE ---
   Future<void> _cargarCatalogos() async {
     try {
       final supabase = Supabase.instance.client;
-      
-      // Hacemos las dos peticiones en paralelo para que sea más rápido
+
       final responses = await Future.wait([
         supabase.from('carreras').select().order('siglas'),
         supabase.from('salones').select().order('id_salon'),
@@ -77,10 +74,15 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
         });
       }
     } catch (e) {
+      // --- CORRECCIÓN 1: Usamos mounted porque accedemos al contexto del State ---
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar catálogos: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar catálogos: $e'), backgroundColor: Colors.red),
-        );
         setState(() => _isLoadingCatalogos = false);
       }
     }
@@ -104,23 +106,27 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
   void _crearExamen() async {
     if (_formKey.currentState!.validate()) {
       if (_fechaSeleccionada == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona una fecha')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Selecciona una fecha')));
         return;
       }
 
-      // Obtener datos del usuario actual
       try {
         final authRepository = sl<AuthRepository>();
         final user = await authRepository.getCurrentUser();
 
-        if (user != null && mounted) {
+        // --- CORRECCIÓN 1: Usamos mounted ---
+        if (!mounted) return;
+
+        if (user != null) {
           context.read<CrearExamenBloc>().add(
             CrearExamenRequested(
               materia: _materiaController.text.trim(),
               fecha: _fechaSeleccionada!,
               turno: _turnoSeleccionado!,
-              salon: _salonSeleccionado!,     // <-- Usamos la llave foránea
-              carrera: _carreraSeleccionada!, // <-- Usamos la llave foránea
+              salon: _salonSeleccionado!,
+              carrera: _carreraSeleccionada!,
               semestre: _semestreSeleccionado!,
               profesorId: user.id,
               profesorNombre: user.fullName,
@@ -128,9 +134,11 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
           );
         }
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-        }
+        // --- CORRECCIÓN 1: Usamos mounted ---
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -165,13 +173,16 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                   );
 
                   Future.delayed(const Duration(milliseconds: 500), () {
-                    if (mounted) {
+                    if (context.mounted) {
                       Navigator.pop(context, true);
                     }
                   });
                 } else if (state is CrearExamenError) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
               },
@@ -191,7 +202,9 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                             prefixIcon: Icon(Icons.book),
                             border: OutlineInputBorder(),
                           ),
-                          validator: (value) => value == null || value.isEmpty ? 'La materia es requerida' : null,
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'La materia es requerida'
+                              : null,
                         ),
                         const SizedBox(height: 16),
 
@@ -206,7 +219,9 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                             ),
                             child: Text(
                               _fechaSeleccionada != null
-                                  ? DateFormat('dd/MM/yyyy').format(_fechaSeleccionada!)
+                                  ? DateFormat(
+                                      'dd/MM/yyyy',
+                                    ).format(_fechaSeleccionada!)
                                   : 'Selecciona una fecha',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
@@ -215,24 +230,33 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                         const SizedBox(height: 16),
 
                         // --- TURNO ---
+                        // --- CORRECCIÓN 2: Reemplazo de value por initialValue ---
                         DropdownButtonFormField<String>(
-                          value: _turnoSeleccionado,
+                          initialValue: _turnoSeleccionado,
                           decoration: const InputDecoration(
                             labelText: 'Turno',
                             prefixIcon: Icon(Icons.schedule),
                             border: OutlineInputBorder(),
                           ),
                           items: _turnos
-                              .map((turno) => DropdownMenuItem(value: turno, child: Text(turno)))
+                              .map(
+                                (turno) => DropdownMenuItem(
+                                  value: turno,
+                                  child: Text(turno),
+                                ),
+                              )
                               .toList(),
-                          onChanged: (value) => setState(() => _turnoSeleccionado = value),
-                          validator: (value) => value == null ? 'Selecciona un turno' : null,
+                          onChanged: (value) =>
+                              setState(() => _turnoSeleccionado = value),
+                          validator: (value) =>
+                              value == null ? 'Selecciona un turno' : null,
                         ),
                         const SizedBox(height: 16),
 
-                        // --- CARRERA (DINÁMICO DESDE SUPABASE) ---
+                        // --- CARRERA ---
+                        // --- CORRECCIÓN 2: Reemplazo de value por initialValue ---
                         DropdownButtonFormField<String>(
-                          value: _carreraSeleccionada,
+                          initialValue: _carreraSeleccionada,
                           decoration: const InputDecoration(
                             labelText: 'Carrera',
                             prefixIcon: Icon(Icons.school),
@@ -240,34 +264,47 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                           ),
                           items: _carreras.map((carrera) {
                             return DropdownMenuItem<String>(
-                              value: carrera['siglas'], // Ej. 'ISC'
-                              child: Text('${carrera['siglas']} - ${carrera['nombre_completo']}'),
+                              value: carrera['siglas'],
+                              child: Text(
+                                '${carrera['siglas']} - ${carrera['nombre_completo']}',
+                              ),
                             );
                           }).toList(),
-                          onChanged: (value) => setState(() => _carreraSeleccionada = value),
-                          validator: (value) => value == null ? 'Selecciona una carrera' : null,
+                          onChanged: (value) =>
+                              setState(() => _carreraSeleccionada = value),
+                          validator: (value) =>
+                              value == null ? 'Selecciona una carrera' : null,
                         ),
                         const SizedBox(height: 16),
 
                         // --- SEMESTRE ---
+                        // --- CORRECCIÓN 2: Reemplazo de value por initialValue ---
                         DropdownButtonFormField<int>(
-                          value: _semestreSeleccionado,
+                          initialValue: _semestreSeleccionado,
                           decoration: const InputDecoration(
                             labelText: 'Semestre',
                             prefixIcon: Icon(Icons.layers),
                             border: OutlineInputBorder(),
                           ),
                           items: _semestres
-                              .map((semestre) => DropdownMenuItem(value: semestre, child: Text('Semestre $semestre')))
+                              .map(
+                                (semestre) => DropdownMenuItem(
+                                  value: semestre,
+                                  child: Text('Semestre $semestre'),
+                                ),
+                              )
                               .toList(),
-                          onChanged: (value) => setState(() => _semestreSeleccionado = value),
-                          validator: (value) => value == null ? 'Selecciona un semestre' : null,
+                          onChanged: (value) =>
+                              setState(() => _semestreSeleccionado = value),
+                          validator: (value) =>
+                              value == null ? 'Selecciona un semestre' : null,
                         ),
                         const SizedBox(height: 16),
 
-                        // --- SALÓN (DINÁMICO DESDE SUPABASE) ---
+                        // --- SALÓN ---
+                        // --- CORRECCIÓN 2: Reemplazo de value por initialValue ---
                         DropdownButtonFormField<String>(
-                          value: _salonSeleccionado,
+                          initialValue: _salonSeleccionado,
                           decoration: const InputDecoration(
                             labelText: 'Salón',
                             prefixIcon: Icon(Icons.location_on),
@@ -275,12 +312,16 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                           ),
                           items: _salones.map((salon) {
                             return DropdownMenuItem<String>(
-                              value: salon['id_salon'], // Ej. '1101'
-                              child: Text('Salón ${salon['id_salon']} (${salon['edificio']})'),
+                              value: salon['id_salon'],
+                              child: Text(
+                                'Salón ${salon['id_salon']} (${salon['edificio']})',
+                              ),
                             );
                           }).toList(),
-                          onChanged: (value) => setState(() => _salonSeleccionado = value),
-                          validator: (value) => value == null ? 'Selecciona un salón' : null,
+                          onChanged: (value) =>
+                              setState(() => _salonSeleccionado = value),
+                          validator: (value) =>
+                              value == null ? 'Selecciona un salón' : null,
                         ),
                         const SizedBox(height: 32),
 
@@ -288,10 +329,17 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                         SizedBox(
                           height: 50,
                           child: FilledButton(
-                            onPressed: state is CrearExamenLoading ? null : _crearExamen,
+                            onPressed: state is CrearExamenLoading
+                                ? null
+                                : _crearExamen,
                             child: state is CrearExamenLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text('Crear Examen', style: TextStyle(fontSize: 16)),
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
+                                : const Text(
+                                    'Crear Examen',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
                           ),
                         ),
                       ],

@@ -179,6 +179,9 @@ class _LoginPageViewState extends State<_LoginPageView> {
       final authRepository = sl<AuthRepository>();
       final user = await authRepository.getCurrentUser();
 
+      // --- SOLUCIÓN: Usamos context.mounted en lugar de mounted ---
+      if (!context.mounted) return;
+
       if (user != null) {
         if (user.isAdmin) {
           Navigator.pushReplacement(
@@ -204,6 +207,9 @@ class _LoginPageViewState extends State<_LoginPageView> {
         );
       }
     } catch (e) {
+      // --- SOLUCIÓN AQUÍ TAMBIÉN ---
+      if (!context.mounted) return;
+
       // Si hay error, simplemente ir a SearchPage
       Navigator.pushReplacement(
         context,
