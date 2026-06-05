@@ -128,7 +128,7 @@ class EtsRemoteDataSourceImpl implements EtsRemoteDataSource {
           .select()
           .single();
 
-      return EtsModel.fromJson(response as Map<String, dynamic>);
+      return EtsModel.fromJson(response);
     } on PostgrestException catch (e) {
       throw Exception('Error al crear examen: ${e.message}');
     } catch (e) {
@@ -146,7 +146,7 @@ class EtsRemoteDataSourceImpl implements EtsRemoteDataSource {
           .select()
           .single();
 
-      return EtsModel.fromJson(response as Map<String, dynamic>);
+      return EtsModel.fromJson(response);
     } on PostgrestException catch (e) {
       throw Exception('Error al actualizar examen: ${e.message}');
     } catch (e) {

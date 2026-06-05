@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'domain/repositories/auth_repository.dart';
 import 'injection_container.dart' as di;
 import 'presentation/auth/pages/login_page.dart';
 import 'presentation/search_ets/pages/search_page.dart';

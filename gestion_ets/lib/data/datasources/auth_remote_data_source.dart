@@ -131,7 +131,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         throw Exception('No se pudo crear el perfil de usuario');
       }
 
-      return UserModel.fromJson(response as Map<String, dynamic>);
+      return UserModel.fromJson(response);
     } on PostgrestException catch (e) {
       throw Exception('Error al crear perfil: ${e.message}');
     } catch (e) {
@@ -148,10 +148,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           .maybeSingle();
 
       if (response == null) {
-        throw Exception('No se encontró un perfil para este usuario. Contacta al administrador.');
+        throw Exception(
+          'No se encontró un perfil para este usuario. Contacta al administrador.',
+        );
       }
 
-      return UserModel.fromJson(response as Map<String, dynamic>);
+      return UserModel.fromJson(response);
     } on PostgrestException catch (e) {
       throw Exception('Error al obtener perfil: ${e.message}');
     }

@@ -214,7 +214,7 @@ class _CreateUserPageState extends State<CreateUserPage> {
 
                     // Rol
                     DropdownButtonFormField<String>(
-                      value: _selectedRole,
+                      initialValue: _selectedRole,
                       decoration: InputDecoration(
                         labelText: 'Rol de Usuario',
                         prefixIcon: const Icon(Icons.security),
