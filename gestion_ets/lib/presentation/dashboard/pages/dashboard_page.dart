@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../domain/entities/ets_entity.dart';
+import '../../../domain/repositories/auth_repository.dart'; // <-- NUEVO IMPORT
 import '../../../injection_container.dart';
+import '../../auth/pages/login_page.dart'; // <-- NUEVO IMPORT
 import '../../manage_ets/bloc/manage_ets_bloc.dart';
 import '../../manage_ets/bloc/manage_ets_event.dart';
 import '../../manage_ets/bloc/manage_ets_state.dart';
@@ -35,6 +37,44 @@ class DashboardPage extends StatelessWidget {
 class _DashboardView extends StatelessWidget {
   const _DashboardView();
 
+  // --- NUEVA FUNCIÓN ROBUSTA DE CERRAR SESIÓN ---
+  Future<void> _handleLogout(BuildContext context) async {
+    // 1. Mostrar un pequeño diálogo de carga para evitar clics dobles
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final authRepository = sl<AuthRepository>();
+      await authRepository.logout();
+
+      if (!context.mounted) return;
+
+      // 2. Cerramos el diálogo de carga
+      Navigator.pop(context);
+
+      // 3. LA SOLUCIÓN WEB: Limpiamos TODA la pila de navegación y forzamos el Login
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false, // Esto destruye todas las rutas anteriores
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      Navigator.pop(context); // Cerramos el diálogo en caso de error
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cerrar sesión: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<ManageEtsBloc, ManageEtsState>(
@@ -62,9 +102,7 @@ class _DashboardView extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProfilePage(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const ProfilePage()),
                 );
               },
             ),
@@ -72,7 +110,8 @@ class _DashboardView extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.logout),
               tooltip: 'Cerrar sesión',
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () =>
+                  _handleLogout(context), // <-- APLICAMOS LA CORRECCIÓN AQUÍ
             ),
           ],
         ),
@@ -196,7 +235,9 @@ class _DashboardView extends StatelessWidget {
                 final ets = state.listaExamenes[index];
                 return Card(
                   child: ListTile(
-                    leading: CircleAvatar(child: Text(ets.turno)),
+                    leading: CircleAvatar(
+                      child: Text(ets.turno.substring(0, 1)),
+                    ), // Un pequeño toque visual
                     title: Text(ets.materia),
                     subtitle: Text(
                       'Salón: ${ets.salon} | Prof: ${ets.profesorNombre}',
