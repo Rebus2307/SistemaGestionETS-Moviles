@@ -34,23 +34,40 @@ class _SearchPageView extends StatefulWidget {
 }
 
 class _SearchPageViewState extends State<_SearchPageView> {
+  // --- FUNCIÓN DE CERRAR SESIÓN ROBUSTA (WEB/MÓVIL) ---
   Future<void> _handleLogout() async {
+    // 1. Mostramos el diálogo de carga
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
     try {
       final authRepository = sl<AuthRepository>();
       await authRepository.logout();
 
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-        );
-      }
+      if (!mounted) return;
+
+      // 2. Cerramos el diálogo de carga
+      Navigator.pop(context);
+
+      // 3. Limpiamos la pila de navegación para evitar el congelamiento
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false,
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error al cerrar sesión: $e')));
-      }
+      if (!mounted) return;
+
+      Navigator.pop(context); // Cerramos el diálogo
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cerrar sesión: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -61,16 +78,14 @@ class _SearchPageViewState extends State<_SearchPageView> {
         title: const Text('Buscador de ETS - ESCOM'),
         centerTitle: true,
         actions: [
-          // --- NUEVO BOTÓN DE PERFIL ---
+          // --- BOTÓN DE PERFIL ---
           IconButton(
             icon: const Icon(Icons.account_circle),
             tooltip: 'Mi Perfil',
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const ProfilePage(),
-                ),
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
               );
             },
           ),
@@ -166,6 +181,7 @@ class _SearchFiltersWidgetState extends State<_SearchFiltersWidget> {
                 labelText: 'Carrera',
                 border: OutlineInputBorder(),
               ),
+              // --- CORRECCIÓN: initialValue en lugar de value ---
               initialValue: _carreraSeleccionada,
               items: _carreras.map((carrera) {
                 return DropdownMenuItem(value: carrera, child: Text(carrera));
@@ -188,6 +204,7 @@ class _SearchFiltersWidgetState extends State<_SearchFiltersWidget> {
                       labelText: 'Semestre',
                       border: OutlineInputBorder(),
                     ),
+                    // --- CORRECCIÓN: initialValue en lugar de value ---
                     initialValue: _semestreSeleccionado,
                     items: _semestres.map((semestre) {
                       return DropdownMenuItem(

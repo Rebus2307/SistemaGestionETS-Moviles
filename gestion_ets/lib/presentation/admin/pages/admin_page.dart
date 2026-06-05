@@ -48,25 +48,46 @@ class _AdminPageState extends State<AdminPage> {
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
+  // --- CORRECCIÓN: FUNCIÓN DE CERRAR SESIÓN ROBUSTA (WEB/MÓVIL) ---
   Future<void> _handleLogout() async {
+    // 1. Mostrar un pequeño diálogo de carga
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
     try {
       await _authRepository.logout();
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-        );
-      }
+
+      if (!mounted) return;
+
+      // 2. Cerramos el diálogo de carga
+      Navigator.pop(context);
+
+      // 3. Limpiamos la pila de navegación
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false,
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error al cerrar sesión: $e')));
-      }
+      if (!mounted) return;
+
+      Navigator.pop(context); // Cerramos el diálogo
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cerrar sesión: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -86,16 +107,14 @@ class _AdminPageState extends State<AdminPage> {
               ),
             ),
           ),
-          // --- NUEVO BOTÓN DE PERFIL ---
+          // --- BOTÓN DE PERFIL ---
           IconButton(
             icon: const Icon(Icons.account_circle),
             tooltip: 'Mi Perfil',
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const ProfilePage(),
-                ),
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
               );
             },
           ),
