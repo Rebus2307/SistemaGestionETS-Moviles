@@ -283,9 +283,17 @@ class _DashboardView extends StatelessWidget {
     );
   }
 
+  // --- CORRECCIÓN EN LA ASIGNACIÓN DE COLORES PARA EVITAR EL BUG VISUAL ---
   Color _getColorForCarrera(String carrera) {
-    if (carrera == 'ISC') return Colors.blue;
-    if (carrera == 'LCD') return Colors.green;
-    return Colors.orange;
+    switch (carrera.toUpperCase()) {
+      case 'ISC':
+        return Colors.blue;
+      case 'LCD':
+        return Colors.green;
+      case 'IIA':
+        return Colors.red; // Color explícito para IIA
+      default:
+        return Colors.orange; // Respaldo para cualquier otra cosa
+    }
   }
 }

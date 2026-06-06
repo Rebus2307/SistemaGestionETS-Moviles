@@ -16,26 +16,25 @@ class GetDashboardStatsUseCase {
 
     // 2. Inicializamos nuestros contadores
     int total = examenes.length;
-
     Map<String, int> porCarrera = {'ISC': 0, 'LCD': 0, 'IIA': 0};
 
-    // 3. Contamos los exámenes
+    // 3. Contamos los exámenes usando el dato REAL de la base de datos
     for (var ets in examenes) {
-      // Lógica de simulación para las barras del dashboard
-      if (ets.materia.contains('Móviles') || ets.materia.contains('Redes')) {
-        porCarrera['ISC'] = porCarrera['ISC']! + 1;
-      } else if (ets.materia.contains('Datos')) {
-        porCarrera['LCD'] = porCarrera['LCD']! + 1;
+      final carreraGuardada = ets.carrera.toUpperCase();
+
+      if (porCarrera.containsKey(carreraGuardada)) {
+        porCarrera[carreraGuardada] = porCarrera[carreraGuardada]! + 1;
       } else {
-        porCarrera['IIA'] = porCarrera['IIA']! + 1;
+        // En caso de que se agregue una nueva carrera en el futuro
+        porCarrera[carreraGuardada] = 1;
       }
     }
 
-    // AHORA retornamos también la lista de examenes para poder mostrarla en el dashboard
+    // Retornamos también la lista de examenes para mostrarla en el dashboard
     return {
       'total': total,
       'porCarrera': porCarrera,
-      'listaExamenes': examenes, // <-- NUEVO
+      'listaExamenes': examenes,
     };
   }
 }
