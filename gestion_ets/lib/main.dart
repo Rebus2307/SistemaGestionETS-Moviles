@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'injection_container.dart' as di;
 import 'presentation/auth/pages/login_page.dart';
 import 'presentation/search_ets/pages/search_page.dart';
+import 'core/theme/theme_cubit.dart'; // <-- NUEVO IMPORT DEL TEMA
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,10 +38,7 @@ class _GestionEtsAppState extends State<GestionEtsApp> {
 
   Future<bool> _checkAuthentication() async {
     try {
-      // Espera a que Supabase restaure la sesión automáticamente
-      // Supabase obtiene la sesión guardada de SharedPreferences
       await Future.delayed(const Duration(milliseconds: 500));
-
       final user = Supabase.instance.client.auth.currentUser;
       return user != null;
     } catch (e) {
@@ -49,26 +48,51 @@ class _GestionEtsAppState extends State<GestionEtsApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Gestión ETS',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6200EE)),
-        useMaterial3: true,
-      ),
-      home: FutureBuilder<bool>(
-        future: _authFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
+    // --- ENVOLVEMOS LA APP PARA ESCUCHAR EL TEMA ---
+    return BlocProvider(
+      create: (_) => ThemeCubit(),
+      child: BlocBuilder<ThemeCubit, ThemeMode>(
+        builder: (context, themeMode) {
+          return MaterialApp(
+            title: 'Gestión ETS',
+            debugShowCheckedModeBanner: false,
 
-          if (snapshot.hasData && snapshot.data == true) {
-            return const SearchPage();
-          } else {
-            return const LoginPage();
-          }
+            // TEMA CLARO
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFF6200EE),
+              ),
+              useMaterial3: true,
+            ),
+
+            // TEMA OSCURO
+            darkTheme: ThemeData.dark(useMaterial3: true).copyWith(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFF6200EE),
+                brightness: Brightness.dark,
+              ),
+            ),
+
+            // MODO ACTUAL (Controlado por el switch)
+            themeMode: themeMode,
+
+            home: FutureBuilder<bool>(
+              future: _authFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (snapshot.hasData && snapshot.data == true) {
+                  return const SearchPage();
+                } else {
+                  return const LoginPage();
+                }
+              },
+            ),
+          );
         },
       ),
     );

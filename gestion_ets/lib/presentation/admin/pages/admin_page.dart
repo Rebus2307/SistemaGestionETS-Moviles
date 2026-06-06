@@ -4,8 +4,7 @@ import '../../../injection_container.dart';
 import '../../../domain/entities/user_entity.dart';
 import '../../auth/pages/login_page.dart';
 import '../../manage_ets/pages/crear_examen_page.dart';
-import './create_user_page.dart';
-// --- IMPORT DEL PERFIL ---
+import './create_user_page.dart'; // Temporalmente apuntamos aquí hasta crear la lista
 import '../../profile/pages/profile_page.dart';
 
 class AdminPage extends StatefulWidget {
@@ -48,30 +47,20 @@ class _AdminPageState extends State<AdminPage> {
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // --- CORRECCIÓN: FUNCIÓN DE CERRAR SESIÓN ROBUSTA (WEB/MÓVIL) ---
   Future<void> _handleLogout() async {
-    // 1. Mostrar un pequeño diálogo de carga
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
-
     try {
       await _authRepository.logout();
-
       if (!mounted) return;
-
-      // 2. Cerramos el diálogo de carga
       Navigator.pop(context);
-
-      // 3. Limpiamos la pila de navegación
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -79,9 +68,7 @@ class _AdminPageState extends State<AdminPage> {
       );
     } catch (e) {
       if (!mounted) return;
-
-      Navigator.pop(context); // Cerramos el diálogo
-
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al cerrar sesión: $e'),
@@ -107,7 +94,6 @@ class _AdminPageState extends State<AdminPage> {
               ),
             ),
           ),
-          // --- BOTÓN DE PERFIL ---
           IconButton(
             icon: const Icon(Icons.account_circle),
             tooltip: 'Mi Perfil',
@@ -118,7 +104,6 @@ class _AdminPageState extends State<AdminPage> {
               );
             },
           ),
-          // --- BOTÓN DE LOGOUT ---
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Cerrar sesión',
@@ -129,17 +114,6 @@ class _AdminPageState extends State<AdminPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _buildAdminDashboard(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          // Navegar a la página de crear examen
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CrearExamenPage()),
-          );
-        },
-        tooltip: 'Crear Examen',
-        child: const Icon(Icons.add),
-      ),
     );
   }
 
@@ -149,7 +123,6 @@ class _AdminPageState extends State<AdminPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Tarjeta de bienvenida
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -170,19 +143,17 @@ class _AdminPageState extends State<AdminPage> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Opciones del administrador
           const Text(
             'Opciones de Administración',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-
-          // Botón: Gestionar usuarios
+          // 1. Gestionar Usuarios
           _buildAdminOption(
             icon: Icons.people,
             title: 'Gestionar Usuarios',
-            subtitle: 'Ver, crear y editar usuarios del sistema',
+            subtitle:
+                'Ver lista, crear, editar y eliminar usuarios del sistema',
             onTap: () async {
               await Navigator.push(
                 context,
@@ -191,8 +162,7 @@ class _AdminPageState extends State<AdminPage> {
             },
           ),
           const SizedBox(height: 12),
-
-          // Botón: Ver exámenes
+          // 2. Gestionar Exámenes
           _buildAdminOption(
             icon: Icons.assignment,
             title: 'Gestionar Exámenes',
@@ -203,32 +173,6 @@ class _AdminPageState extends State<AdminPage> {
                 MaterialPageRoute(
                   builder: (context) => const CrearExamenPage(),
                 ),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-
-          // Botón: Ver reportes
-          _buildAdminOption(
-            icon: Icons.bar_chart,
-            title: 'Ver Reportes',
-            subtitle: 'Reportes de actividad y estadísticas del sistema',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Ver reportes: Próximamente')),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-
-          // Botón: Configuración
-          _buildAdminOption(
-            icon: Icons.settings,
-            title: 'Configuración',
-            subtitle: 'Configurar parámetros del sistema',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Configuración: Próximamente')),
               );
             },
           ),
