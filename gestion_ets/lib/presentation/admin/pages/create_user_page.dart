@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../injection_container.dart';
 import '../../../domain/repositories/auth_repository.dart';
+import '../../auth/pages/login_page.dart';
 import '../bloc/create_user_bloc.dart';
 import '../bloc/create_user_event.dart';
 import '../bloc/create_user_state.dart';
@@ -46,6 +47,9 @@ class _CreateUserPageState extends State<CreateUserPage> {
   }
 
   void _submitForm(BuildContext context) {
+    // Ocultamos el teclado al enviar para evitar bugs visuales
+    FocusScope.of(context).unfocus();
+
     if (_formKey.currentState!.validate()) {
       context.read<CreateUserBloc>().add(
         CreateUserRequested(
@@ -62,7 +66,9 @@ class _CreateUserPageState extends State<CreateUserPage> {
     _emailController.clear();
     _passwordController.clear();
     _fullNameController.clear();
-    _selectedRole = 'alumno';
+    setState(() {
+      _selectedRole = 'alumno';
+    });
     context.read<CreateUserBloc>().add(const ResetCreateUserForm());
   }
 
@@ -75,12 +81,24 @@ class _CreateUserPageState extends State<CreateUserPage> {
           if (state is CreateUserSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Usuario ${state.userEmail} creado exitosamente'),
+                content: Text(
+                  'Usuario ${state.userEmail} creado. Por seguridad de sesión, se le redirigirá al Login.',
+                ),
                 backgroundColor: Colors.green,
-                duration: const Duration(seconds: 2),
+                duration: const Duration(seconds: 4),
               ),
             );
-            _resetForm();
+
+            // Regresamos limpiamente al Login
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                  (route) => false,
+                );
+              }
+            });
           } else if (state is CreateUserError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -137,11 +155,11 @@ class _CreateUserPageState extends State<CreateUserPage> {
                     // Email
                     TextFormField(
                       controller: _emailController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Email',
                         hintText: 'usuario@ejemplo.com',
-                        prefixIcon: const Icon(Icons.email),
-                        border: const OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.email),
+                        border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
@@ -160,11 +178,11 @@ class _CreateUserPageState extends State<CreateUserPage> {
                     // Nombre completo
                     TextFormField(
                       controller: _fullNameController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Nombre Completo',
                         hintText: 'Juan Pérez García',
-                        prefixIcon: const Icon(Icons.person),
-                        border: const OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person),
+                        border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -214,11 +232,12 @@ class _CreateUserPageState extends State<CreateUserPage> {
 
                     // Rol
                     DropdownButtonFormField<String>(
+                      // --- CORRECCIÓN AQUÍ: initialValue en lugar de value ---
                       initialValue: _selectedRole,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Rol de Usuario',
-                        prefixIcon: const Icon(Icons.security),
-                        border: const OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.security),
+                        border: OutlineInputBorder(),
                       ),
                       items: _roles.map((role) {
                         return DropdownMenuItem(
