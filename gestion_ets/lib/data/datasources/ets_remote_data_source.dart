@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/ets_model.dart';
 
@@ -24,10 +25,16 @@ abstract class EtsRemoteDataSource {
     required int semestre,
     required String profesorId,
     required String profesorNombre,
+    Uint8List? pdfBytes,
+    String? pdfFileName,
   });
 
   /// Actualizar un examen existente (solo el profesor creador)
-  Future<EtsModel> actualizarExamen(EtsModel examen);
+  Future<EtsModel> actualizarExamen(
+    EtsModel examen, {
+    Uint8List? pdfBytes,
+    String? pdfFileName,
+  });
 
   /// Eliminar un examen (solo el profesor creador)
   Future<void> eliminarExamen(String id);
@@ -109,8 +116,17 @@ class EtsRemoteDataSourceImpl implements EtsRemoteDataSource {
     required int semestre,
     required String profesorId,
     required String profesorNombre,
+    Uint8List? pdfBytes,
+    String? pdfFileName,
   }) async {
     try {
+      String? pdfUrl;
+      if (pdfBytes != null && pdfFileName != null) {
+        final path = 'exams/${DateTime.now().millisecondsSinceEpoch}_$pdfFileName';
+        await supabase.storage.from('examenes-pdfs').uploadBinary(path, pdfBytes);
+        pdfUrl = supabase.storage.from('examenes-pdfs').getPublicUrl(path);
+      }
+
       final examenData = {
         'materia': materia,
         'fecha': fecha.toIso8601String(),
@@ -120,6 +136,7 @@ class EtsRemoteDataSourceImpl implements EtsRemoteDataSource {
         'semestre': semestre,
         'profesor_id': profesorId,
         'profesor_nombre': profesorNombre,
+        'pdf_url': pdfUrl,
       };
 
       final response = await supabase
@@ -137,11 +154,27 @@ class EtsRemoteDataSourceImpl implements EtsRemoteDataSource {
   }
 
   @override
-  Future<EtsModel> actualizarExamen(EtsModel examen) async {
+  Future<EtsModel> actualizarExamen(
+    EtsModel examen, {
+    Uint8List? pdfBytes,
+    String? pdfFileName,
+  }) async {
     try {
+      String? pdfUrl = examen.pdfUrl;
+      if (pdfBytes != null && pdfFileName != null) {
+        final path = 'exams/${DateTime.now().millisecondsSinceEpoch}_$pdfFileName';
+        await supabase.storage.from('examenes-pdfs').uploadBinary(path, pdfBytes);
+        pdfUrl = supabase.storage.from('examenes-pdfs').getPublicUrl(path);
+      }
+
+      final updateData = examen.toJson();
+      if (pdfUrl != null) {
+        updateData['pdf_url'] = pdfUrl;
+      }
+
       final response = await supabase
           .from('examenes')
-          .update(examen.toJson())
+          .update(updateData)
           .eq('id', examen.id)
           .select()
           .single();

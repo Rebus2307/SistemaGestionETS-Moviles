@@ -3,8 +3,8 @@ import '../../../domain/repositories/auth_repository.dart';
 import '../../../injection_container.dart';
 import '../../../domain/entities/user_entity.dart';
 import '../../auth/pages/login_page.dart';
-import '../../manage_ets/pages/crear_examen_page.dart';
-import './create_user_page.dart'; // Temporalmente apuntamos aquí hasta crear la lista
+import './manage_exams_page.dart';
+import './manage_users_page.dart';
 import '../../profile/pages/profile_page.dart';
 
 class AdminPage extends StatefulWidget {
@@ -157,7 +157,7 @@ class _AdminPageState extends State<AdminPage> {
             onTap: () async {
               await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const CreateUserPage()),
+                MaterialPageRoute(builder: (context) => const ManageUsersPage()),
               );
             },
           ),
@@ -171,7 +171,7 @@ class _AdminPageState extends State<AdminPage> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const CrearExamenPage(),
+                  builder: (context) => const ManageExamsPage(),
                 ),
               );
             },

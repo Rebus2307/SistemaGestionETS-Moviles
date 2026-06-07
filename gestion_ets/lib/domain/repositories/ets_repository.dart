@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import '../entities/ets_entity.dart';
 
 abstract class EtsRepository {
@@ -22,10 +23,16 @@ abstract class EtsRepository {
     required int semestre,
     required String profesorId,
     required String profesorNombre,
+    Uint8List? pdfBytes,
+    String? pdfFileName,
   });
 
   /// Actualizar un examen existente (solo el profesor creador)
-  Future<EtsEntity> actualizarExamen(EtsEntity examen);
+  Future<EtsEntity> actualizarExamen(
+    EtsEntity examen, {
+    Uint8List? pdfBytes,
+    String? pdfFileName,
+  });
 
   /// Eliminar un examen (solo el profesor creador)
   Future<void> eliminarExamen(String id);

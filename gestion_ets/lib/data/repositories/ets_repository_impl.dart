@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import '../../domain/entities/ets_entity.dart';
 import '../../domain/repositories/ets_repository.dart';
 import '../datasources/ets_remote_data_source.dart';
@@ -63,6 +64,8 @@ class EtsRepositoryImpl implements EtsRepository {
     required int semestre,
     required String profesorId,
     required String profesorNombre,
+    Uint8List? pdfBytes,
+    String? pdfFileName,
   }) async {
     try {
       final modelo = await remoteDataSource.crearExamen(
@@ -74,6 +77,8 @@ class EtsRepositoryImpl implements EtsRepository {
         semestre: semestre,
         profesorId: profesorId,
         profesorNombre: profesorNombre,
+        pdfBytes: pdfBytes,
+        pdfFileName: pdfFileName,
       );
 
       return modelo;
@@ -83,10 +88,31 @@ class EtsRepositoryImpl implements EtsRepository {
   }
 
   @override
-  Future<EtsEntity> actualizarExamen(EtsEntity examen) async {
+  Future<EtsEntity> actualizarExamen(
+    EtsEntity examen, {
+    Uint8List? pdfBytes,
+    String? pdfFileName,
+  }) async {
     try {
-      final modelo = examen as EtsModel;
-      final resultado = await remoteDataSource.actualizarExamen(modelo);
+      final modelo = EtsModel(
+        id: examen.id,
+        materia: examen.materia,
+        fecha: examen.fecha,
+        turno: examen.turno,
+        salon: examen.salon,
+        profesorId: examen.profesorId,
+        profesorNombre: examen.profesorNombre,
+        carrera: examen.carrera,
+        semestre: examen.semestre,
+        createdAt: examen.createdAt,
+        updatedAt: examen.updatedAt,
+        pdfUrl: examen.pdfUrl,
+      );
+      final resultado = await remoteDataSource.actualizarExamen(
+        modelo,
+        pdfBytes: pdfBytes,
+        pdfFileName: pdfFileName,
+      );
       return resultado;
     } catch (e) {
       throw Exception('Error al actualizar examen: $e');

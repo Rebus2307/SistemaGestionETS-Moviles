@@ -13,6 +13,7 @@ class EtsModel extends EtsEntity {
     required super.semestre,
     required super.createdAt,
     required super.updatedAt,
+    super.pdfUrl,
   });
 
   // Método factory para crear un modelo a partir de la respuesta del Backend
@@ -31,6 +32,7 @@ class EtsModel extends EtsEntity {
       semestre: json['semestre'] as int,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      pdfUrl: json['pdf_url'] as String?,
     );
   }
 
@@ -46,6 +48,7 @@ class EtsModel extends EtsEntity {
       'profesor_nombre': profesorNombre,
       'carrera': carrera,
       'semestre': semestre,
+      'pdf_url': pdfUrl,
     };
 
     // Solo incluir id cuando se actualiza o cuando no se especifique lo contrario

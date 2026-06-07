@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import '../entities/ets_entity.dart';
 import '../repositories/ets_repository.dart';
 
@@ -11,9 +12,12 @@ class ActualizarExamenUseCase {
   Future<EtsEntity> call({
     required EtsEntity examen,
     required String profesorIdActual,
+    bool isAdmin = false,
+    Uint8List? pdfBytes,
+    String? pdfFileName,
   }) async {
-    // Validar que solo el profesor creador pueda actualizar
-    if (examen.profesorId != profesorIdActual) {
+    // Validar que solo el profesor creador pueda actualizar, a menos que sea administrador
+    if (!isAdmin && examen.profesorId != profesorIdActual) {
       throw Exception(
         'No tienes permisos para actualizar este examen. '
         'Solo el profesor que lo creó puede modificarlo.',
@@ -45,6 +49,10 @@ class ActualizarExamenUseCase {
     }
 
     // Actualizar el examen
-    return await repository.actualizarExamen(examen);
+    return await repository.actualizarExamen(
+      examen,
+      pdfBytes: pdfBytes,
+      pdfFileName: pdfFileName,
+    );
   }
 }

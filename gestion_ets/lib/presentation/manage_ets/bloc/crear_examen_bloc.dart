@@ -33,6 +33,8 @@ class CrearExamenBloc extends Bloc<CrearExamenEvent, CrearExamenState> {
         semestre: event.semestre,
         profesorId: event.profesorId,
         profesorNombre: event.profesorNombre,
+        pdfBytes: event.pdfBytes,
+        pdfFileName: event.pdfFileName,
       );
 
       emit(CrearExamenSuccess(examen: examen, esActualizacion: false));
@@ -65,6 +67,9 @@ class CrearExamenBloc extends Bloc<CrearExamenEvent, CrearExamenState> {
       final examen = await actualizarExamenUseCase.call(
         examen: examenActualizado,
         profesorIdActual: event.profesorIdActual,
+        isAdmin: event.isAdmin,
+        pdfBytes: event.pdfBytes,
+        pdfFileName: event.pdfFileName,
       );
 
       emit(CrearExamenSuccess(examen: examen, esActualizacion: true));

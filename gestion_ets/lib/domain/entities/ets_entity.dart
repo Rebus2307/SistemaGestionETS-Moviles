@@ -12,6 +12,7 @@ class EtsEntity extends Equatable {
   final int semestre;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? pdfUrl; // URL del PDF opcional subido a Supabase
 
   const EtsEntity({
     required this.id,
@@ -25,6 +26,7 @@ class EtsEntity extends Equatable {
     required this.semestre,
     required this.createdAt,
     required this.updatedAt,
+    this.pdfUrl,
   });
 
   // Equatable nos ayuda a comparar objetos por sus valores y no por su espacio en memoria,
@@ -42,5 +44,6 @@ class EtsEntity extends Equatable {
     semestre,
     createdAt,
     updatedAt,
+    pdfUrl,
   ];
 }

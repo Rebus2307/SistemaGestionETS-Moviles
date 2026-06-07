@@ -1,28 +1,35 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../../injection_container.dart';
+import '../../../domain/entities/ets_entity.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../bloc/crear_examen_bloc.dart';
 import '../bloc/crear_examen_event.dart';
 import '../bloc/crear_examen_state.dart';
 
 class CrearExamenPage extends StatelessWidget {
-  const CrearExamenPage({super.key});
+  final EtsEntity? etsParaEditar;
+
+  const CrearExamenPage({super.key, this.etsParaEditar});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => sl<CrearExamenBloc>(),
-      child: const _CrearExamenPageView(),
+      child: _CrearExamenPageView(etsParaEditar: etsParaEditar),
     );
   }
 }
 
 class _CrearExamenPageView extends StatefulWidget {
-  const _CrearExamenPageView();
+  final EtsEntity? etsParaEditar;
+
+  const _CrearExamenPageView({this.etsParaEditar});
 
   @override
   State<_CrearExamenPageView> createState() => _CrearExamenPageViewState();
@@ -38,6 +45,9 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
   String? _carreraSeleccionada;
   String? _salonSeleccionado;
 
+  Uint8List? _pdfBytes;
+  String? _pdfFileName;
+
   bool _isLoadingCatalogos = true;
   List<Map<String, dynamic>> _carreras = [];
   List<Map<String, dynamic>> _salones = [];
@@ -49,6 +59,19 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
   void initState() {
     super.initState();
     _cargarCatalogos();
+
+    if (widget.etsParaEditar != null) {
+      _materiaController.text = widget.etsParaEditar!.materia;
+      _fechaSeleccionada = widget.etsParaEditar!.fecha;
+      _turnoSeleccionado = widget.etsParaEditar!.turno;
+      _semestreSeleccionado = widget.etsParaEditar!.semestre;
+      _carreraSeleccionada = widget.etsParaEditar!.carrera;
+      _salonSeleccionado = widget.etsParaEditar!.salon;
+      if (widget.etsParaEditar!.pdfUrl != null &&
+          widget.etsParaEditar!.pdfUrl!.trim().isNotEmpty) {
+        _pdfFileName = 'PDF adjunto actual';
+      }
+    }
   }
 
   @override
@@ -74,7 +97,6 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
         });
       }
     } catch (e) {
-      // --- CORRECCIÓN 1: Usamos mounted porque accedemos al contexto del State ---
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -91,8 +113,8 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
   Future<void> _seleccionarFecha() async {
     final fecha = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
+      initialDate: _fechaSeleccionada ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
@@ -103,7 +125,40 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
     }
   }
 
-  void _crearExamen() async {
+  Future<void> _seleccionarPDF() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        withData: true,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        if (file.bytes != null) {
+          setState(() {
+            _pdfBytes = file.bytes;
+            _pdfFileName = file.name;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al seleccionar PDF: $e')),
+        );
+      }
+    }
+  }
+
+  void _removerPDF() {
+    setState(() {
+      _pdfBytes = null;
+      _pdfFileName = null;
+    });
+  }
+
+  void _crearOEditarExamen() async {
     if (_formKey.currentState!.validate()) {
       if (_fechaSeleccionada == null) {
         ScaffoldMessenger.of(
@@ -116,25 +171,45 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
         final authRepository = sl<AuthRepository>();
         final user = await authRepository.getCurrentUser();
 
-        // --- CORRECCIÓN 1: Usamos mounted ---
         if (!mounted) return;
 
         if (user != null) {
-          context.read<CrearExamenBloc>().add(
-            CrearExamenRequested(
-              materia: _materiaController.text.trim(),
-              fecha: _fechaSeleccionada!,
-              turno: _turnoSeleccionado!,
-              salon: _salonSeleccionado!,
-              carrera: _carreraSeleccionada!,
-              semestre: _semestreSeleccionado!,
-              profesorId: user.id,
-              profesorNombre: user.fullName,
-            ),
-          );
+          if (widget.etsParaEditar != null) {
+            context.read<CrearExamenBloc>().add(
+              ActualizarExamenRequested(
+                examenId: widget.etsParaEditar!.id,
+                materia: _materiaController.text.trim(),
+                fecha: _fechaSeleccionada!,
+                turno: _turnoSeleccionado!,
+                salon: _salonSeleccionado!,
+                carrera: _carreraSeleccionada!,
+                semestre: _semestreSeleccionado!,
+                profesorId: widget.etsParaEditar!.profesorId,
+                profesorNombre: widget.etsParaEditar!.profesorNombre,
+                profesorIdActual: user.id,
+                isAdmin: user.isAdmin,
+                pdfBytes: _pdfBytes,
+                pdfFileName: _pdfFileName,
+              ),
+            );
+          } else {
+            context.read<CrearExamenBloc>().add(
+              CrearExamenRequested(
+                materia: _materiaController.text.trim(),
+                fecha: _fechaSeleccionada!,
+                turno: _turnoSeleccionado!,
+                salon: _salonSeleccionado!,
+                carrera: _carreraSeleccionada!,
+                semestre: _semestreSeleccionado!,
+                profesorId: user.id,
+                profesorNombre: user.fullName,
+                pdfBytes: _pdfBytes,
+                pdfFileName: _pdfFileName,
+              ),
+            );
+          }
         }
       } catch (e) {
-        // --- CORRECCIÓN 1: Usamos mounted ---
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
@@ -145,8 +220,13 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
 
   @override
   Widget build(BuildContext context) {
+    final esEdicion = widget.etsParaEditar != null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Crear Examen'), centerTitle: true),
+      appBar: AppBar(
+        title: Text(esEdicion ? 'Editar Examen' : 'Crear Examen'),
+        centerTitle: true,
+      ),
       body: _isLoadingCatalogos
           ? const Center(
               child: Column(
@@ -187,6 +267,14 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                 }
               },
               builder: (context, state) {
+                // Verificar compatibilidad del valor seleccionado con los catálogos cargados
+                final carreraValida = _carreras.any(
+                  (c) => c['siglas'] == _carreraSeleccionada,
+                );
+                final salonValido = _salones.any(
+                  (s) => s['id_salon'] == _salonSeleccionado,
+                );
+
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(16.0),
                   child: Form(
@@ -219,9 +307,7 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                             ),
                             child: Text(
                               _fechaSeleccionada != null
-                                  ? DateFormat(
-                                      'dd/MM/yyyy',
-                                    ).format(_fechaSeleccionada!)
+                                  ? DateFormat('dd/MM/yyyy').format(_fechaSeleccionada!)
                                   : 'Selecciona una fecha',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
@@ -230,7 +316,6 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                         const SizedBox(height: 16),
 
                         // --- TURNO ---
-                        // --- CORRECCIÓN 2: Reemplazo de value por initialValue ---
                         DropdownButtonFormField<String>(
                           initialValue: _turnoSeleccionado,
                           decoration: const InputDecoration(
@@ -254,9 +339,8 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                         const SizedBox(height: 16),
 
                         // --- CARRERA ---
-                        // --- CORRECCIÓN 2: Reemplazo de value por initialValue ---
                         DropdownButtonFormField<String>(
-                          initialValue: _carreraSeleccionada,
+                          initialValue: carreraValida ? _carreraSeleccionada : null,
                           decoration: const InputDecoration(
                             labelText: 'Carrera',
                             prefixIcon: Icon(Icons.school),
@@ -278,7 +362,6 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                         const SizedBox(height: 16),
 
                         // --- SEMESTRE ---
-                        // --- CORRECCIÓN 2: Reemplazo de value por initialValue ---
                         DropdownButtonFormField<int>(
                           initialValue: _semestreSeleccionado,
                           decoration: const InputDecoration(
@@ -302,9 +385,8 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                         const SizedBox(height: 16),
 
                         // --- SALÓN ---
-                        // --- CORRECCIÓN 2: Reemplazo de value por initialValue ---
                         DropdownButtonFormField<String>(
-                          initialValue: _salonSeleccionado,
+                          initialValue: salonValido ? _salonSeleccionado : null,
                           decoration: const InputDecoration(
                             labelText: 'Salón',
                             prefixIcon: Icon(Icons.location_on),
@@ -323,22 +405,59 @@ class _CrearExamenPageViewState extends State<_CrearExamenPageView> {
                           validator: (value) =>
                               value == null ? 'Selecciona un salón' : null,
                         ),
+                        const SizedBox(height: 24),
+
+                        // --- ARCHIVO PDF ADJUNTO ---
+                        const Text(
+                          'Archivo PDF Opcional (se unirá al final del PDF generado)',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_pdfFileName != null)
+                          Card(
+                            color: Colors.green.shade50,
+                            child: ListTile(
+                              leading: const Icon(
+                                Icons.picture_as_pdf,
+                                color: Colors.red,
+                              ),
+                              title: Text(
+                                _pdfFileName!,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.close, color: Colors.grey),
+                                onPressed: _removerPDF,
+                              ),
+                            ),
+                          )
+                        else
+                          OutlinedButton.icon(
+                            onPressed: _seleccionarPDF,
+                            icon: const Icon(Icons.attach_file),
+                            label: const Text('Adjuntar archivo PDF'),
+                          ),
                         const SizedBox(height: 32),
 
-                        // --- BOTÓN CREAR ---
+                        // --- BOTÓN CREAR / GUARDAR ---
                         SizedBox(
                           height: 50,
                           child: FilledButton(
                             onPressed: state is CrearExamenLoading
                                 ? null
-                                : _crearExamen,
+                                : _crearOEditarExamen,
                             child: state is CrearExamenLoading
                                 ? const CircularProgressIndicator(
                                     color: Colors.white,
                                   )
-                                : const Text(
-                                    'Crear Examen',
-                                    style: TextStyle(fontSize: 16),
+                                : Text(
+                                    esEdicion ? 'Guardar Cambios' : 'Crear Examen',
+                                    style: const TextStyle(fontSize: 16),
                                   ),
                           ),
                         ),

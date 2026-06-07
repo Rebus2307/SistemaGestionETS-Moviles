@@ -20,4 +20,18 @@ abstract class AuthRepository {
 
   /// Verifica si hay una sesión activa
   Future<bool> isAuthenticated();
+
+  /// Obtiene la lista completa de usuarios
+  Future<List<UserEntity>> getAllUsers();
+
+  /// Actualiza la información de un usuario
+  Future<UserEntity> updateUser({
+    required String id,
+    required String fullName,
+    required String email,
+    required String role,
+  });
+
+  /// Elimina un usuario por su ID
+  Future<void> deleteUser(String userId);
 }

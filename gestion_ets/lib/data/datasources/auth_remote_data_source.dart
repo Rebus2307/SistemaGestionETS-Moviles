@@ -21,6 +21,17 @@ abstract class AuthRemoteDataSource {
     required String fullName,
     required String role,
   });
+
+  Future<List<UserModel>> getAllUsers();
+
+  Future<UserModel> updateUser({
+    required String id,
+    required String fullName,
+    required String email,
+    required String role,
+  });
+
+  Future<void> deleteUser(String userId);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -156,6 +167,62 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       return UserModel.fromJson(response);
     } on PostgrestException catch (e) {
       throw Exception('Error al obtener perfil: ${e.message}');
+    }
+  }
+
+  @override
+  Future<List<UserModel>> getAllUsers() async {
+    try {
+      final response = await supabase
+          .from('users')
+          .select()
+          .order('full_name', ascending: true);
+
+      return (response as List)
+          .map((json) => UserModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } on PostgrestException catch (e) {
+      throw Exception('Error al obtener usuarios: ${e.message}');
+    } catch (e) {
+      throw Exception('Error: $e');
+    }
+  }
+
+  @override
+  Future<UserModel> updateUser({
+    required String id,
+    required String fullName,
+    required String email,
+    required String role,
+  }) async {
+    try {
+      final response = await supabase
+          .from('users')
+          .update({
+            'full_name': fullName,
+            'email': email,
+            'role': role,
+          })
+          .eq('id', id)
+          .select()
+          .single();
+
+      return UserModel.fromJson(response);
+    } on PostgrestException catch (e) {
+      throw Exception('Error al actualizar usuario: ${e.message}');
+    } catch (e) {
+      throw Exception('Error: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteUser(String userId) async {
+    try {
+      await supabase.from('users').delete().eq('id', userId);
+    } on PostgrestException catch (e) {
+      throw Exception('Error al eliminar usuario de la base de datos: ${e.message}');
+    } catch (e) {
+      throw Exception('Error: $e');
     }
   }
 }

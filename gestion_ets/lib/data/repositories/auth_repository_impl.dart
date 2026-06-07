@@ -45,4 +45,29 @@ class AuthRepositoryImpl implements AuthRepository {
     final user = await remoteDataSource.getCurrentUser();
     return user != null;
   }
+
+  @override
+  Future<List<UserEntity>> getAllUsers() async {
+    return await remoteDataSource.getAllUsers();
+  }
+
+  @override
+  Future<UserEntity> updateUser({
+    required String id,
+    required String fullName,
+    required String email,
+    required String role,
+  }) async {
+    return await remoteDataSource.updateUser(
+      id: id,
+      fullName: fullName,
+      email: email,
+      role: role,
+    );
+  }
+
+  @override
+  Future<void> deleteUser(String userId) async {
+    return await remoteDataSource.deleteUser(userId);
+  }
 }

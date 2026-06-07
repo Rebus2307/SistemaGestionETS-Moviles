@@ -13,6 +13,8 @@ import '../bloc/dashboard_bloc.dart';
 import '../bloc/dashboard_event.dart';
 import '../bloc/dashboard_state.dart';
 // --- IMPORT DEL PERFIL ---
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/utils/pdf_generator.dart';
 import '../../profile/pages/profile_page.dart';
 
 class DashboardPage extends StatelessWidget {
@@ -233,6 +235,9 @@ class _DashboardView extends StatelessWidget {
               itemCount: state.listaExamenes.length,
               itemBuilder: (context, index) {
                 final ets = state.listaExamenes[index];
+                final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+                final esMio = ets.profesorId == currentUserId;
+
                 return Card(
                   child: ListTile(
                     leading: CircleAvatar(
@@ -242,9 +247,42 @@ class _DashboardView extends StatelessWidget {
                     subtitle: Text(
                       'Salón: ${ets.salon} | Prof: ${ets.profesorNombre}',
                     ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: () => _confirmarEliminacion(context, ets),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (esMio) ...[
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined),
+                            tooltip: 'Editar examen',
+                            onPressed: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CrearExamenPage(
+                                    etsParaEditar: ets,
+                                  ),
+                                ),
+                              );
+                              if (result == true && context.mounted) {
+                                context.read<DashboardBloc>().add(LoadDashboardStatsEvent());
+                              }
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                            tooltip: 'Eliminar examen',
+                            onPressed: () => _confirmarEliminacion(context, ets),
+                          ),
+                        ] else ...[
+                          IconButton(
+                            icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                            tooltip: 'Exportar PDF',
+                            onPressed: () async {
+                              await PdfGenerator.exportarEts(ets);
+                            },
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 );

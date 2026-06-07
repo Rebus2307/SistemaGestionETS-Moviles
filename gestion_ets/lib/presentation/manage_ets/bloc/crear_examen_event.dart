@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 
 abstract class CrearExamenEvent extends Equatable {
@@ -16,6 +17,8 @@ class CrearExamenRequested extends CrearExamenEvent {
   final int semestre;
   final String profesorId;
   final String profesorNombre;
+  final Uint8List? pdfBytes;
+  final String? pdfFileName;
 
   const CrearExamenRequested({
     required this.materia,
@@ -26,6 +29,8 @@ class CrearExamenRequested extends CrearExamenEvent {
     required this.semestre,
     required this.profesorId,
     required this.profesorNombre,
+    this.pdfBytes,
+    this.pdfFileName,
   });
 
   @override
@@ -38,6 +43,8 @@ class CrearExamenRequested extends CrearExamenEvent {
     semestre,
     profesorId,
     profesorNombre,
+    pdfBytes,
+    pdfFileName,
   ];
 }
 
@@ -52,6 +59,9 @@ class ActualizarExamenRequested extends CrearExamenEvent {
   final String profesorId;
   final String profesorNombre;
   final String profesorIdActual;
+  final bool isAdmin;
+  final Uint8List? pdfBytes;
+  final String? pdfFileName;
 
   const ActualizarExamenRequested({
     required this.examenId,
@@ -64,6 +74,9 @@ class ActualizarExamenRequested extends CrearExamenEvent {
     required this.profesorId,
     required this.profesorNombre,
     required this.profesorIdActual,
+    this.isAdmin = false,
+    this.pdfBytes,
+    this.pdfFileName,
   });
 
   @override
@@ -78,6 +91,9 @@ class ActualizarExamenRequested extends CrearExamenEvent {
     profesorId,
     profesorNombre,
     profesorIdActual,
+    isAdmin,
+    pdfBytes,
+    pdfFileName,
   ];
 }
 

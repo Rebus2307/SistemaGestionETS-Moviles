@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import '../entities/ets_entity.dart';
 import '../repositories/ets_repository.dart';
 
@@ -17,6 +18,8 @@ class CrearExamenUseCase {
     required int semestre,
     required String profesorId,
     required String profesorNombre,
+    Uint8List? pdfBytes,
+    String? pdfFileName,
   }) async {
     // Validar turno válido
     final turnosValidos = ['Mañana', 'Tarde', 'Noche'];
@@ -59,6 +62,8 @@ class CrearExamenUseCase {
       semestre: semestre,
       profesorId: profesorId,
       profesorNombre: profesorNombre,
+      pdfBytes: pdfBytes,
+      pdfFileName: pdfFileName,
     );
   }
 }
