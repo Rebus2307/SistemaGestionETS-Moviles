@@ -7,12 +7,11 @@ import '../../../injection_container.dart';
 import '../bloc/ets_search_bloc.dart';
 import '../bloc/ets_search_event.dart';
 import '../bloc/ets_search_state.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../core/utils/pdf_generator.dart';
 import '../../auth/pages/login_page.dart';
-// --- IMPORT DEL PERFIL ---
 import '../../profile/pages/profile_page.dart';
 
-// --- WIDGET PRINCIPAL ---
 class SearchPage extends StatelessWidget {
   const SearchPage({super.key});
 
@@ -25,7 +24,6 @@ class SearchPage extends StatelessWidget {
   }
 }
 
-// --- VISTA REACTIVA ---
 class _SearchPageView extends StatefulWidget {
   const _SearchPageView();
 
@@ -34,25 +32,17 @@ class _SearchPageView extends StatefulWidget {
 }
 
 class _SearchPageViewState extends State<_SearchPageView> {
-  // --- FUNCIÓN DE CERRAR SESIÓN ROBUSTA (WEB/MÓVIL) ---
   Future<void> _handleLogout() async {
-    // 1. Mostramos el diálogo de carga
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
-
     try {
       final authRepository = sl<AuthRepository>();
       await authRepository.logout();
-
       if (!mounted) return;
-
-      // 2. Cerramos el diálogo de carga
       Navigator.pop(context);
-
-      // 3. Limpiamos la pila de navegación para evitar el congelamiento
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -60,25 +50,38 @@ class _SearchPageViewState extends State<_SearchPageView> {
       );
     } catch (e) {
       if (!mounted) return;
-
-      Navigator.pop(context); // Cerramos el diálogo
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al cerrar sesión: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
         ),
       );
     }
   }
 
+  Color _colorForCarrera(String carrera) {
+    switch (carrera.toUpperCase()) {
+      case 'ISC':
+        return Theme.of(context).colorScheme.secondary;
+      case 'LCD':
+        return AppColors.success;
+      case 'IIA':
+        return Theme.of(context).colorScheme.error;
+      default:
+        return Theme.of(context).colorScheme.tertiary;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Buscador de ETS - ESCOM'),
-        centerTitle: true,
+        title: const Text('Buscador de ETS'),
         actions: [
-          // --- BOTÓN DE PERFIL ---
           IconButton(
             icon: const Icon(Icons.account_circle),
             tooltip: 'Mi Perfil',
@@ -89,7 +92,6 @@ class _SearchPageViewState extends State<_SearchPageView> {
               );
             },
           ),
-          // --- BOTÓN DE CERRAR SESIÓN ---
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Cerrar sesión',
@@ -98,31 +100,42 @@ class _SearchPageViewState extends State<_SearchPageView> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           children: [
+            const SizedBox(height: 16),
             const _SearchFiltersWidget(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Expanded(
               child: BlocBuilder<EtsSearchBloc, EtsSearchState>(
                 builder: (context, state) {
                   if (state is EtsSearchInitial) {
-                    return const Center(
-                      child: Text(
-                        'Ingresa tus criterios de búsqueda para comenzar.',
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search, size: 64, color: cs.onSurface.withValues(alpha: 0.3)),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Ingresa tus criterios de búsqueda\npara comenzar.',
+                            textAlign: TextAlign.center,
+                            style: tt.bodyMedium?.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
+                          ),
+                        ],
                       ),
                     );
                   } else if (state is EtsSearchLoading) {
                     return const Center(child: CircularProgressIndicator());
                   } else if (state is EtsSearchLoaded) {
-                    return _ResultsTableWidget(examenes: state.examenes);
+                    return _ResultsList(
+                      examenes: state.examenes,
+                      colorForCarrera: _colorForCarrera,
+                    );
                   } else if (state is EtsSearchError) {
                     return Center(
                       child: Text(
                         'Ups: ${state.message}',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+                        style: TextStyle(color: cs.error),
                       ),
                     );
                   }
@@ -137,7 +150,6 @@ class _SearchPageViewState extends State<_SearchPageView> {
   }
 }
 
-// --- WIDGET DE FILTROS ---
 class _SearchFiltersWidget extends StatefulWidget {
   const _SearchFiltersWidget();
 
@@ -148,7 +160,6 @@ class _SearchFiltersWidget extends StatefulWidget {
 class _SearchFiltersWidgetState extends State<_SearchFiltersWidget> {
   String? _carreraSeleccionada;
   String? _semestreSeleccionado;
-
   final TextEditingController _materiaController = TextEditingController();
 
   final List<String> _carreras = ['ISC', 'LCD', 'IIA'];
@@ -162,39 +173,35 @@ class _SearchFiltersWidgetState extends State<_SearchFiltersWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     return Card(
-      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Filtros de Búsqueda',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Icon(Icons.filter_alt_outlined, size: 20, color: cs.primary),
+                const SizedBox(width: 8),
+                Text('Filtros de Búsqueda', style: tt.titleSmall?.copyWith(color: cs.primary)),
+              ],
             ),
             const SizedBox(height: 16),
-
-            // Selector de Carrera
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(
                 labelText: 'Carrera',
-                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.school_outlined),
               ),
-              // --- CORRECCIÓN: initialValue en lugar de value ---
               initialValue: _carreraSeleccionada,
               items: _carreras.map((carrera) {
                 return DropdownMenuItem(value: carrera, child: Text(carrera));
               }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _carreraSeleccionada = value;
-                });
-              },
+              onChanged: (value) => setState(() => _carreraSeleccionada = value),
             ),
-            const SizedBox(height: 16),
-
-            // Fila con el Semestre y la Materia
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -202,39 +209,29 @@ class _SearchFiltersWidgetState extends State<_SearchFiltersWidget> {
                   child: DropdownButtonFormField<String>(
                     decoration: const InputDecoration(
                       labelText: 'Semestre',
-                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.layers_outlined),
                     ),
-                    // --- CORRECCIÓN: initialValue en lugar de value ---
                     initialValue: _semestreSeleccionado,
                     items: _semestres.map((semestre) {
-                      return DropdownMenuItem(
-                        value: semestre,
-                        child: Text(semestre),
-                      );
+                      return DropdownMenuItem(value: semestre, child: Text(semestre));
                     }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _semestreSeleccionado = value;
-                      });
-                    },
+                    onChanged: (value) => setState(() => _semestreSeleccionado = value),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   flex: 2,
-                  child: TextField(
+                  child: TextFormField(
                     controller: _materiaController,
                     decoration: const InputDecoration(
                       labelText: 'Materia (Opcional)',
-                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.book_outlined),
                     ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-
-            // Botón de Búsqueda
             FilledButton.icon(
               onPressed: () {
                 context.read<EtsSearchBloc>().add(
@@ -257,43 +254,81 @@ class _SearchFiltersWidgetState extends State<_SearchFiltersWidget> {
   }
 }
 
-// --- WIDGET DE TABLA DE RESULTADOS ---
-class _ResultsTableWidget extends StatelessWidget {
+class _ResultsList extends StatelessWidget {
   final List<EtsEntity> examenes;
+  final Color Function(String) colorForCarrera;
 
-  const _ResultsTableWidget({required this.examenes});
+  const _ResultsList({
+    required this.examenes,
+    required this.colorForCarrera,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+
     if (examenes.isEmpty) {
-      return const Center(
-        child: Text('No se encontraron exámenes para esta búsqueda.'),
+      return Center(
+        child: Text(
+          'No se encontraron exámenes para esta búsqueda.',
+          style: tt.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
       );
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 16),
       itemCount: examenes.length,
       itemBuilder: (context, index) {
         final ets = examenes[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8.0),
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.menu_book)),
-            title: Text(
-              ets.materia,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              '${ets.fecha.toLocal().toString().split(' ')[0]} - Turno ${ets.turno}\nSalón: ${ets.salon}',
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.picture_as_pdf),
-              color:
-                  Colors.red[700], // Le damos un toque visual al botón de PDF
-              onPressed: () async {
-                // Mandamos a llamar a nuestro utilitario pasándole la entidad
-                await PdfGenerator.exportarEts(ets);
-              },
+        final carreraColor = colorForCarrera(ets.carrera);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Card(
+            child: IntrinsicHeight(
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    decoration: BoxDecoration(
+                      color: carreraColor,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        bottomLeft: Radius.circular(16),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      leading: CircleAvatar(
+                        backgroundColor: carreraColor.withValues(alpha: 0.12),
+                        child: Icon(Icons.menu_book, color: carreraColor, size: 20),
+                      ),
+                      title: Text(ets.materia, style: tt.titleMedium),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            '${ets.fecha.toLocal().toString().split(' ')[0]} - Turno ${ets.turno}',
+                            style: tt.bodySmall,
+                          ),
+                          Text('Salón: ${ets.salon}', style: tt.bodySmall),
+                        ],
+                      ),
+                      trailing: IconButton(
+                        icon: Icon(Icons.picture_as_pdf, color: Theme.of(context).colorScheme.error),
+                        onPressed: () async {
+                          await PdfGenerator.exportarEts(ets);
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

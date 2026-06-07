@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/theme/app_colors.dart';
 import '../../../domain/entities/ets_entity.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../injection_container.dart';
@@ -73,6 +74,9 @@ class _EtsFormPageState extends State<EtsFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     return BlocProvider(
       create: (_) => sl<ManageEtsBloc>(),
       child: BlocConsumer<ManageEtsBloc, ManageEtsState>(
@@ -81,7 +85,7 @@ class _EtsFormPageState extends State<EtsFormPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.green,
+                backgroundColor: AppColors.success,
               ),
             );
             Navigator.pop(context);
@@ -89,7 +93,7 @@ class _EtsFormPageState extends State<EtsFormPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.error,
               ),
             );
           }
@@ -102,7 +106,7 @@ class _EtsFormPageState extends State<EtsFormPage> {
               ),
             ),
             body: SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.all(24),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -111,18 +115,17 @@ class _EtsFormPageState extends State<EtsFormPage> {
                       controller: _materiaController,
                       decoration: const InputDecoration(
                         labelText: 'Materia',
-                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.book_outlined),
                       ),
                       validator: (v) =>
                           (v == null || v.isEmpty) ? 'Campo obligatorio' : null,
                     ),
                     const SizedBox(height: 16),
-
                     DropdownButtonFormField<String>(
                       initialValue: _carreraSeleccionada,
                       decoration: const InputDecoration(
                         labelText: 'Carrera',
-                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.school_outlined),
                       ),
                       items: _carreras.map((carrera) {
                         return DropdownMenuItem(
@@ -137,12 +140,11 @@ class _EtsFormPageState extends State<EtsFormPage> {
                       },
                     ),
                     const SizedBox(height: 16),
-
                     DropdownButtonFormField<int>(
                       initialValue: _semestreSeleccionado,
                       decoration: const InputDecoration(
                         labelText: 'Semestre',
-                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.layers_outlined),
                       ),
                       items: _semestres.map((semestre) {
                         return DropdownMenuItem(
@@ -157,13 +159,7 @@ class _EtsFormPageState extends State<EtsFormPage> {
                       },
                     ),
                     const SizedBox(height: 16),
-
-                    ListTile(
-                      title: const Text('Fecha del Examen'),
-                      subtitle: Text(
-                        DateFormat('dd/MM/yyyy').format(_fechaSeleccionada),
-                      ),
-                      trailing: const Icon(Icons.calendar_today),
+                    GestureDetector(
                       onTap: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -177,14 +173,23 @@ class _EtsFormPageState extends State<EtsFormPage> {
                           });
                         }
                       },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Fecha del Examen',
+                          prefixIcon: Icon(Icons.calendar_today_outlined),
+                        ),
+                        child: Text(
+                          DateFormat('dd/MM/yyyy').format(_fechaSeleccionada),
+                          style: tt.bodyMedium,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
-
                     DropdownButtonFormField<String>(
                       initialValue: _turnoSeleccionado,
                       decoration: const InputDecoration(
                         labelText: 'Turno',
-                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.schedule_outlined),
                       ),
                       items: _turnos
                           .map(
@@ -203,33 +208,30 @@ class _EtsFormPageState extends State<EtsFormPage> {
                       },
                     ),
                     const SizedBox(height: 16),
-
                     TextFormField(
                       controller: _salonController,
                       decoration: const InputDecoration(
                         labelText: 'Salón',
-                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.location_on_outlined),
                       ),
                       validator: (v) =>
                           (v == null || v.isEmpty) ? 'Campo obligatorio' : null,
                     ),
                     const SizedBox(height: 16),
-
                     TextFormField(
                       controller: _profesorNombreController,
                       decoration: const InputDecoration(
                         labelText: 'Nombre del Profesor',
-                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person_outlined),
                       ),
                       readOnly: true,
                       validator: (v) =>
                           (v == null || v.isEmpty) ? 'Campo obligatorio' : null,
                     ),
                     const SizedBox(height: 32),
-
                     SizedBox(
                       width: double.infinity,
-                      height: 50,
+                      height: 52,
                       child: FilledButton(
                         onPressed: state is ManageEtsLoading
                             ? null
@@ -240,7 +242,6 @@ class _EtsFormPageState extends State<EtsFormPage> {
                                     final user = await authRepository
                                         .getCurrentUser();
 
-                                    // --- CORRECCIÓN: Validación en el context del Builder ---
                                     if (!context.mounted) return;
 
                                     if (user != null) {
@@ -267,13 +268,12 @@ class _EtsFormPageState extends State<EtsFormPage> {
                                       );
                                     }
                                   } catch (e) {
-                                    // --- CORRECCIÓN: Validación en el context del Builder ---
                                     if (!context.mounted) return;
 
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text('Error: $e'),
-                                        backgroundColor: Colors.red,
+                                        backgroundColor: AppColors.error,
                                       ),
                                     );
                                   }
@@ -284,11 +284,10 @@ class _EtsFormPageState extends State<EtsFormPage> {
                                 height: 20,
                                 width: 20,
                                 child: CircularProgressIndicator(
-                                  color: Colors.white,
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Guardar Examen'),
+                            : Text('Guardar Examen', style: tt.labelLarge?.copyWith(color: cs.onPrimary)),
                       ),
                     ),
                   ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../domain/entities/user_entity.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../injection_container.dart';
@@ -27,56 +28,40 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
     setState(() => _isLoading = true);
     try {
       final list = await _authRepository.getAllUsers();
-      setState(() {
-        _users = list;
-        _isLoading = false;
-      });
+      setState(() { _users = list; _isLoading = false; });
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar usuarios: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error al cargar usuarios: $e'), backgroundColor: Theme.of(context).colorScheme.error),
         );
       }
     }
   }
 
   Future<void> _deleteUser(UserEntity user) async {
-    // Confirmación
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('¿Eliminar usuario?'),
-        content: Text(
-          '¿Estás seguro de que deseas eliminar a ${user.fullName}? Esta acción no se puede deshacer.',
-        ),
+        content: Text('¿Estás seguro de que deseas eliminar a ${user.fullName}? Esta acción no se puede deshacer.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Eliminar'),
           ),
         ],
       ),
     );
-
     if (confirm == true) {
       setState(() => _isLoading = true);
       try {
         await _authRepository.deleteUser(user.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Usuario eliminado correctamente'),
-              backgroundColor: Colors.green,
-            ),
+            const SnackBar(content: Text('Usuario eliminado correctamente'), backgroundColor: AppColors.success),
           );
         }
         _loadUsers();
@@ -84,10 +69,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
         setState(() => _isLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al eliminar usuario: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Error al eliminar usuario: $e'), backgroundColor: Theme.of(context).colorScheme.error),
           );
         }
       }
@@ -115,76 +97,39 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
                     children: [
                       TextFormField(
                         controller: nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre Completo',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) => value == null || value.trim().isEmpty
-                            ? 'El nombre es obligatorio'
-                            : null,
+                        decoration: const InputDecoration(labelText: 'Nombre Completo'),
+                        validator: (value) => value == null || value.trim().isEmpty ? 'El nombre es obligatorio' : null,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Correo Electrónico',
-                          border: OutlineInputBorder(),
-                        ),
+                        decoration: const InputDecoration(labelText: 'Correo Electrónico'),
                         keyboardType: TextInputType.emailAddress,
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'El correo es obligatorio';
-                          }
-                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                            return 'Ingrese un correo válido';
-                          }
+                          if (value == null || value.isEmpty) return 'El correo es obligatorio';
+                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) return 'Ingrese un correo válido';
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<UserRole>(
                         initialValue: selectedRole,
-                        decoration: const InputDecoration(
-                          labelText: 'Rol',
-                          border: OutlineInputBorder(),
-                        ),
+                        decoration: const InputDecoration(labelText: 'Rol'),
                         items: const [
-                          DropdownMenuItem(
-                            value: UserRole.alumno,
-                            child: Text('Estudiante (Alumno)'),
-                          ),
-                          DropdownMenuItem(
-                            value: UserRole.profesorCoordinador,
-                            child: Text('Profesor Coordinador'),
-                          ),
-                          DropdownMenuItem(
-                            value: UserRole.administrador,
-                            child: Text('Administrador'),
-                          ),
+                          DropdownMenuItem(value: UserRole.alumno, child: Text('Estudiante (Alumno)')),
+                          DropdownMenuItem(value: UserRole.profesorCoordinador, child: Text('Profesor Coordinador')),
+                          DropdownMenuItem(value: UserRole.administrador, child: Text('Administrador')),
                         ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setDialogState(() {
-                              selectedRole = value;
-                            });
-                          }
-                        },
+                        onChanged: (value) { if (value != null) setDialogState(() => selectedRole = value); },
                       ),
                     ],
                   ),
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancelar'),
-                ),
+                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
                 FilledButton(
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) {
-                      Navigator.pop(context, true);
-                    }
-                  },
+                  onPressed: () { if (formKey.currentState!.validate()) Navigator.pop(context, true); },
                   child: const Text('Guardar'),
                 ),
               ],
@@ -198,25 +143,12 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
       setState(() => _isLoading = true);
       try {
         String roleStr = 'alumno';
-        if (selectedRole == UserRole.profesorCoordinador) {
-          roleStr = 'profesor_coordinador';
-        } else if (selectedRole == UserRole.administrador) {
-          roleStr = 'administrador';
-        }
-
-        await _authRepository.updateUser(
-          id: user.id,
-          fullName: nameController.text.trim(),
-          email: emailController.text.trim(),
-          role: roleStr,
-        );
-
+        if (selectedRole == UserRole.profesorCoordinador) roleStr = 'profesor_coordinador';
+        else if (selectedRole == UserRole.administrador) roleStr = 'administrador';
+        await _authRepository.updateUser(id: user.id, fullName: nameController.text.trim(), email: emailController.text.trim(), role: roleStr);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Usuario actualizado correctamente'),
-              backgroundColor: Colors.green,
-            ),
+            const SnackBar(content: Text('Usuario actualizado correctamente'), backgroundColor: AppColors.success),
           );
         }
         _loadUsers();
@@ -224,10 +156,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
         setState(() => _isLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al actualizar usuario: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Error al actualizar usuario: $e'), backgroundColor: Theme.of(context).colorScheme.error),
           );
         }
       }
@@ -236,38 +165,30 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
 
   String _getRoleLabel(UserRole role) {
     switch (role) {
-      case UserRole.alumno:
-        return 'Estudiante';
-      case UserRole.profesorCoordinador:
-        return 'Profesor';
-      case UserRole.administrador:
-        return 'Administrador';
+      case UserRole.alumno: return 'Estudiante';
+      case UserRole.profesorCoordinador: return 'Profesor';
+      case UserRole.administrador: return 'Administrador';
     }
   }
 
   Color _getRoleColor(UserRole role, BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     switch (role) {
-      case UserRole.alumno:
-        return Colors.blue;
-      case UserRole.profesorCoordinador:
-        return Colors.green;
-      case UserRole.administrador:
-        return Colors.purple;
+      case UserRole.alumno: return cs.secondary;
+      case UserRole.profesorCoordinador: return AppColors.success;
+      case UserRole.administrador: return cs.primary;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gestionar Usuarios'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadUsers,
-          ),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _loadUsers)],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -276,95 +197,58 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
+                      Icon(Icons.people_outline, size: 64, color: cs.onSurface.withValues(alpha: 0.4)),
                       const SizedBox(height: 16),
-                      Text(
-                        'No hay usuarios registrados',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      Text('No hay usuarios registrados', style: tt.titleMedium?.copyWith(color: cs.onSurface.withValues(alpha: 0.6))),
                     ],
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   itemCount: _users.length,
                   itemBuilder: (context, index) {
                     final user = _users[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer,
-                          backgroundImage: user.avatarUrl != null
-                              ? NetworkImage(user.avatarUrl!)
-                              : null,
-                          child: user.avatarUrl == null
-                              ? Text(
-                                  user.fullName.substring(0, 1).toUpperCase(),
-                                  style: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onPrimaryContainer,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                )
-                              : null,
-                        ),
-                        title: Text(
-                          user.fullName,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(user.email),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _getRoleColor(user.role, context)
-                                    .withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                _getRoleLabel(user.role).toUpperCase(),
-                                style: TextStyle(
-                                  color: _getRoleColor(user.role, context),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                    final roleColor = _getRoleColor(user.role, context);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Card(
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          leading: CircleAvatar(
+                            backgroundColor: cs.primaryContainer,
+                            backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+                            child: user.avatarUrl == null
+                                ? Text(user.fullName.substring(0, 1).toUpperCase(),
+                                    style: TextStyle(color: cs.onPrimaryContainer, fontWeight: FontWeight.bold))
+                                : null,
+                          ),
+                          title: Text(user.fullName, style: tt.titleMedium),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text(user.email, style: tt.bodySmall),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: roleColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  _getRoleLabel(user.role).toUpperCase(),
+                                  style: tt.labelSmall?.copyWith(color: roleColor, fontWeight: FontWeight.bold),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        isThreeLine: true,
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined),
-                              onPressed: () => _editUser(user),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline,
-                                  color: Colors.red),
-                              onPressed: () => _deleteUser(user),
-                            ),
-                          ],
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () => _editUser(user)),
+                              IconButton(icon: Icon(Icons.delete_outline, color: cs.error), onPressed: () => _deleteUser(user)),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -372,12 +256,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
                 ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          // Navegar a la pantalla de crear usuario
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CreateUserPage()),
-          );
-          // Recargar el listado si se creó un usuario
+          await Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateUserPage()));
           _loadUsers();
         },
         label: const Text('Nuevo Usuario'),

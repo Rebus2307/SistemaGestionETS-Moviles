@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../domain/entities/ets_entity.dart';
-import '../../../domain/repositories/auth_repository.dart'; // <-- NUEVO IMPORT
+import '../../../domain/repositories/auth_repository.dart';
 import '../../../injection_container.dart';
-import '../../auth/pages/login_page.dart'; // <-- NUEVO IMPORT
+import '../../auth/pages/login_page.dart';
 import '../../manage_ets/bloc/manage_ets_bloc.dart';
 import '../../manage_ets/bloc/manage_ets_event.dart';
 import '../../manage_ets/bloc/manage_ets_state.dart';
@@ -12,8 +12,8 @@ import '../../manage_ets/pages/crear_examen_page.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../bloc/dashboard_event.dart';
 import '../bloc/dashboard_state.dart';
-// --- IMPORT DEL PERFIL ---
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/pdf_generator.dart';
 import '../../profile/pages/profile_page.dart';
 
@@ -22,8 +22,6 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos MultiBlocProvider porque esta pantalla ahora escuchará al Dashboard (datos)
-    // y al ManageEts (para cuando borremos algo).
     return MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -39,39 +37,29 @@ class DashboardPage extends StatelessWidget {
 class _DashboardView extends StatelessWidget {
   const _DashboardView();
 
-  // --- NUEVA FUNCIÓN ROBUSTA DE CERRAR SESIÓN ---
   Future<void> _handleLogout(BuildContext context) async {
-    // 1. Mostrar un pequeño diálogo de carga para evitar clics dobles
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
-
     try {
       final authRepository = sl<AuthRepository>();
       await authRepository.logout();
-
       if (!context.mounted) return;
-
-      // 2. Cerramos el diálogo de carga
       Navigator.pop(context);
-
-      // 3. LA SOLUCIÓN WEB: Limpiamos TODA la pila de navegación y forzamos el Login
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoginPage()),
-        (route) => false, // Esto destruye todas las rutas anteriores
+        (route) => false,
       );
     } catch (e) {
       if (!context.mounted) return;
-
-      Navigator.pop(context); // Cerramos el diálogo en caso de error
-
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al cerrar sesión: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -85,19 +73,16 @@ class _DashboardView extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success,
             ),
           );
-          // Si borramos algo con éxito, refrescamos las estadísticas del dashboard
           context.read<DashboardBloc>().add(LoadDashboardStatsEvent());
         }
       },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Panel de Control'),
-          centerTitle: true,
           actions: [
-            // --- NUEVO BOTÓN DE PERFIL ---
             IconButton(
               icon: const Icon(Icons.account_circle),
               tooltip: 'Mi Perfil',
@@ -108,12 +93,10 @@ class _DashboardView extends StatelessWidget {
                 );
               },
             ),
-            // --- BOTÓN DE CERRAR SESIÓN ---
             IconButton(
               icon: const Icon(Icons.logout),
               tooltip: 'Cerrar sesión',
-              onPressed: () =>
-                  _handleLogout(context), // <-- APLICAMOS LA CORRECCIÓN AQUÍ
+              onPressed: () => _handleLogout(context),
             ),
           ],
         ),
@@ -124,24 +107,18 @@ class _DashboardView extends StatelessWidget {
             } else if (state is DashboardError) {
               return Center(child: Text(state.message));
             } else if (state is DashboardLoaded) {
-              return _buildDashboardContent(context, state);
+              return _DashboardContent(state: state);
             }
             return const SizedBox.shrink();
           },
         ),
-        // --- BOTÓN PARA CREAR NUEVO EXAMEN ---
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () async {
-            // Esperamos a que el usuario regrese de la pantalla del formulario
             await Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const CrearExamenPage()),
             );
-
-            // Verificamos si la pantalla sigue viva antes de usar el context
             if (!context.mounted) return;
-
-            // Refrescamos el Dashboard de forma segura
             context.read<DashboardBloc>().add(LoadDashboardStatsEvent());
           },
           label: const Text('Nuevo Examen'),
@@ -150,145 +127,221 @@ class _DashboardView extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildDashboardContent(BuildContext context, DashboardLoaded state) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 1. Tarjeta de Total
-          Card(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            elevation: 0,
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.analytics,
-                    size: 48,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Total de ETS Programados',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  Text(
-                    '${state.totalExamenes}',
-                    style: TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ],
-              ),
+class _DashboardContent extends StatelessWidget {
+  final DashboardLoaded state;
+
+  const _DashboardContent({required this.state});
+
+  Color _colorForCarrera(BuildContext context, String carrera) {
+    switch (carrera.toUpperCase()) {
+      case 'ISC':
+        return Theme.of(context).colorScheme.secondary;
+      case 'LCD':
+        return AppColors.success;
+      case 'IIA':
+        return Theme.of(context).colorScheme.error;
+      default:
+        return Theme.of(context).colorScheme.tertiary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final totalCarreras = state.statsPorCarrera.length;
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        context.read<DashboardBloc>().add(LoadDashboardStatsEvent());
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Resumen',
+              style: tt.titleLarge,
             ),
-          ),
-          const SizedBox(height: 32),
-
-          // 2. Gráficas de Carrera
-          const Text(
-            'Distribución por Carrera',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          ...state.statsPorCarrera.entries.map((entry) {
-            final porcentaje = state.totalExamenes > 0
-                ? entry.value / state.totalExamenes
-                : 0.0;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${entry.key}: ${entry.value}'),
-                  LinearProgressIndicator(
-                    value: porcentaje,
-                    color: _getColorForCarrera(entry.key),
-                    minHeight: 8,
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _MetricCard(
+                    icon: Icons.assignment_outlined,
+                    value: '${state.totalExamenes}',
+                    label: 'ETS Programados',
+                    color: cs.primary,
                   ),
-                ],
-              ),
-            );
-          }),
-
-          const SizedBox(height: 32),
-
-          // 3. LISTA DE GESTIÓN
-          const Text(
-            'Lista de Exámenes',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          if (state.listaExamenes.isEmpty)
-            const Text(
-              'No hay exámenes registrados.',
-              textAlign: TextAlign.center,
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: state.listaExamenes.length,
-              itemBuilder: (context, index) {
-                final ets = state.listaExamenes[index];
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _MetricCard(
+                    icon: Icons.school_outlined,
+                    value: '$totalCarreras',
+                    label: 'Carreras',
+                    color: cs.secondary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _MetricCard(
+                    icon: Icons.pending_actions_outlined,
+                    value: '${state.listaExamenes.length}',
+                    label: 'En lista',
+                    color: cs.tertiary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Distribución por Carrera',
+              style: tt.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            ...state.statsPorCarrera.entries.map((entry) {
+              final porcentaje = state.totalExamenes > 0
+                  ? entry.value / state.totalExamenes
+                  : 0.0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(entry.key, style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                        Text('${entry.value}', style: tt.bodySmall),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: porcentaje,
+                        color: _colorForCarrera(context, entry.key),
+                        minHeight: 8,
+                        backgroundColor: cs.surfaceContainerHighest,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 32),
+            Text(
+              'Lista de Exámenes',
+              style: tt.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            if (state.listaExamenes.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  child: Text(
+                    'No hay exámenes registrados.',
+                    style: tt.bodyMedium?.copyWith(color: cs.onSurface.withValues(alpha: 0.6)),
+                  ),
+                ),
+              )
+            else
+              ...state.listaExamenes.map((ets) {
                 final currentUserId = Supabase.instance.client.auth.currentUser?.id;
                 final esMio = ets.profesorId == currentUserId;
-
-                return Card(
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      child: Text(ets.turno.substring(0, 1)),
-                    ), // Un pequeño toque visual
-                    title: Text(ets.materia),
-                    subtitle: Text(
-                      'Salón: ${ets.salon} | Prof: ${ets.profesorNombre}',
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (esMio) ...[
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Editar examen',
-                            onPressed: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CrearExamenPage(
-                                    etsParaEditar: ets,
+                final carreraColor = _colorForCarrera(context, ets.carrera);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Card(
+                    child: IntrinsicHeight(
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 4,
+                            decoration: BoxDecoration(
+                              color: carreraColor,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              title: Text(ets.materia, style: tt.titleMedium),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Salón: ${ets.salon} | Prof: ${ets.profesorNombre}',
+                                    style: tt.bodySmall,
                                   ),
-                                ),
-                              );
-                              if (result == true && context.mounted) {
-                                context.read<DashboardBloc>().add(LoadDashboardStatsEvent());
-                              }
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.red),
-                            tooltip: 'Eliminar examen',
-                            onPressed: () => _confirmarEliminacion(context, ets),
-                          ),
-                        ] else ...[
-                          IconButton(
-                            icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
-                            tooltip: 'Exportar PDF',
-                            onPressed: () async {
-                              await PdfGenerator.exportarEts(ets);
-                            },
+                                  const SizedBox(height: 4),
+                                  Chip(
+                                    label: Text(
+                                      '${ets.carrera} - Sem ${ets.semestre}',
+                                      style: tt.labelSmall?.copyWith(color: carreraColor),
+                                    ),
+                                    backgroundColor: carreraColor.withValues(alpha: 0.12),
+                                    side: BorderSide.none,
+                                    visualDensity: VisualDensity.compact,
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  ),
+                                ],
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (esMio) ...[
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined),
+                                      tooltip: 'Editar examen',
+                                      onPressed: () async {
+                                        final result = await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => CrearExamenPage(etsParaEditar: ets),
+                                          ),
+                                        );
+                                        if (result == true && context.mounted) {
+                                          context.read<DashboardBloc>().add(LoadDashboardStatsEvent());
+                                        }
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.delete_outline, color: cs.error),
+                                      tooltip: 'Eliminar examen',
+                                      onPressed: () => _confirmarEliminacion(context, ets),
+                                    ),
+                                  ] else ...[
+                                    IconButton(
+                                      icon: Icon(Icons.picture_as_pdf, color: cs.error),
+                                      tooltip: 'Exportar PDF',
+                                      onPressed: () async {
+                                        await PdfGenerator.exportarEts(ets);
+                                      },
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 );
-              },
-            ),
-        ],
+              }),
+          ],
+        ),
       ),
     );
   }
@@ -307,11 +360,9 @@ class _DashboardView extends StatelessWidget {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             onPressed: () {
-              // Disparamos el evento al BLoC
               context.read<ManageEtsBloc>().add(DeleteEtsEvent(ets.id));
-              // Cerramos el diálogo
               Navigator.pop(dialogContext);
             },
             child: const Text('Eliminar'),
@@ -320,18 +371,39 @@ class _DashboardView extends StatelessWidget {
       ),
     );
   }
+}
 
-  // --- CORRECCIÓN EN LA ASIGNACIÓN DE COLORES PARA EVITAR EL BUG VISUAL ---
-  Color _getColorForCarrera(String carrera) {
-    switch (carrera.toUpperCase()) {
-      case 'ISC':
-        return Colors.blue;
-      case 'LCD':
-        return Colors.green;
-      case 'IIA':
-        return Colors.red; // Color explícito para IIA
-      default:
-        return Colors.orange; // Respaldo para cualquier otra cosa
-    }
+class _MetricCard extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  const _MetricCard({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    return Card(
+      color: cs.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+        child: Column(
+          children: [
+            Icon(icon, size: 28, color: color),
+            const SizedBox(height: 12),
+            Text(value, style: tt.headlineSmall?.copyWith(color: color, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(label, style: tt.bodySmall, textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
   }
 }

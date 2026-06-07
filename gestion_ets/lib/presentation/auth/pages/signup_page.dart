@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/theme/app_colors.dart';
 import '../../../injection_container.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -35,7 +36,7 @@ class _SignUpPageViewState extends State<_SignUpPageView> {
 
   bool _ocultarPassword = true;
   bool _ocultarConfirmPassword = true;
-  String _selectedRole = 'alumno'; // Por defecto alumno
+  String _selectedRole = 'alumno';
 
   final List<String> _roles = [
     'alumno',
@@ -54,17 +55,15 @@ class _SignUpPageViewState extends State<_SignUpPageView> {
 
   Future<void> _handleSignUp() async {
     if (_formKey.currentState!.validate()) {
-      // Validación adicional: contraseñas coincidan
       if (_passwordController.text != _confirmPasswordController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Las contraseñas no coinciden'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('Las contraseñas no coinciden'),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
         return;
       }
-
       context.read<AuthBloc>().add(
         SignUpRequestedEvent(
           email: _emailController.text.trim(),
@@ -91,10 +90,12 @@ class _SignUpPageViewState extends State<_SignUpPageView> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Crear Cuenta'),
-        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -106,17 +107,16 @@ class _SignUpPageViewState extends State<_SignUpPageView> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Theme.of(context).colorScheme.error,
+                backgroundColor: cs.error,
               ),
             );
           } else if (state is AuthAuthenticated) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('¡Cuenta creada exitosamente!'),
-                backgroundColor: Colors.green,
+                backgroundColor: AppColors.success,
               ),
             );
-            // Regresar a login después de registro exitoso
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -126,7 +126,7 @@ class _SignUpPageViewState extends State<_SignUpPageView> {
         builder: (context, state) {
           return Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -134,28 +134,28 @@ class _SignUpPageViewState extends State<_SignUpPageView> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Icon(
-                      Icons.person_add,
-                      size: 100,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      'Crear Nueva Cuenta',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      Icons.person_add_outlined,
+                      size: 80,
+                      color: cs.primary,
                     ),
                     const SizedBox(height: 24),
-
-                    // --- CAMPO DE NOMBRE COMPLETO ---
+                    Text(
+                      'Crear Nueva Cuenta',
+                      textAlign: TextAlign.center,
+                      style: tt.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Completa los datos para registrarte',
+                      textAlign: TextAlign.center,
+                      style: tt.bodyLarge?.copyWith(color: cs.secondary),
+                    ),
+                    const SizedBox(height: 32),
                     TextFormField(
                       controller: _fullNameController,
                       decoration: const InputDecoration(
                         labelText: 'Nombre Completo',
-                        prefixIcon: Icon(Icons.person),
-                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person_outlined),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -168,14 +168,11 @@ class _SignUpPageViewState extends State<_SignUpPageView> {
                       },
                     ),
                     const SizedBox(height: 16),
-
-                    // --- CAMPO DE EMAIL ---
                     TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
                         labelText: 'Correo Electrónico',
-                        prefixIcon: Icon(Icons.email),
-                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.email_outlined),
                       ),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
@@ -189,25 +186,20 @@ class _SignUpPageViewState extends State<_SignUpPageView> {
                       },
                     ),
                     const SizedBox(height: 16),
-
-                    // --- CAMPO DE CONTRASEÑA ---
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _ocultarPassword,
                       decoration: InputDecoration(
                         labelText: 'Contraseña',
-                        prefixIcon: const Icon(Icons.lock),
-                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock_outlined),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _ocultarPassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                           ),
                           onPressed: () {
-                            setState(() {
-                              _ocultarPassword = !_ocultarPassword;
-                            });
+                            setState(() => _ocultarPassword = !_ocultarPassword);
                           },
                         ),
                       ),
@@ -222,25 +214,21 @@ class _SignUpPageViewState extends State<_SignUpPageView> {
                       },
                     ),
                     const SizedBox(height: 16),
-
-                    // --- CAMPO DE CONFIRMAR CONTRASEÑA ---
                     TextFormField(
                       controller: _confirmPasswordController,
                       obscureText: _ocultarConfirmPassword,
                       decoration: InputDecoration(
                         labelText: 'Confirmar Contraseña',
-                        prefixIcon: const Icon(Icons.lock),
-                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock_outlined),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _ocultarConfirmPassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                           ),
                           onPressed: () {
                             setState(() {
-                              _ocultarConfirmPassword =
-                                  !_ocultarConfirmPassword;
+                              _ocultarConfirmPassword = !_ocultarConfirmPassword;
                             });
                           },
                         ),
@@ -253,11 +241,9 @@ class _SignUpPageViewState extends State<_SignUpPageView> {
                       },
                     ),
                     const SizedBox(height: 16),
-
-                    // --- SELECTOR DE ROL ---
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: DropdownButton<String>(
                           value: _selectedRole,
                           isExpanded: true,
@@ -269,45 +255,44 @@ class _SignUpPageViewState extends State<_SignUpPageView> {
                             );
                           }).toList(),
                           onChanged: (String? newValue) {
-                            setState(() {
-                              if (newValue != null) {
-                                _selectedRole = newValue;
-                              }
-                            });
+                            if (newValue != null) {
+                              setState(() => _selectedRole = newValue);
+                            }
                           },
                         ),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Nota: Solo administradores pueden crear usuarios con otros roles',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: tt.bodySmall?.copyWith(
+                        color: cs.onSurface.withValues(alpha: 0.6),
+                      ),
                     ),
-                    const SizedBox(height: 32),
-
-                    // --- BOTÓN DE REGISTRARSE ---
+                    const SizedBox(height: 24),
                     SizedBox(
-                      height: 50,
+                      height: 52,
                       child: FilledButton(
                         onPressed: state is AuthLoading ? null : _handleSignUp,
                         child: state is AuthLoading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
                               )
-                            : const Text(
+                            : Text(
                                 'Crear Cuenta',
-                                style: TextStyle(fontSize: 16),
+                                style: tt.labelLarge?.copyWith(color: cs.onPrimary),
                               ),
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // --- BOTÓN DE VOLVER A LOGIN ---
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text(
-                        '¿Ya tienes cuenta? Inicia sesión aquí',
-                      ),
+                      child: const Text('¿Ya tienes cuenta? Inicia sesión aquí'),
                     ),
                   ],
                 ),

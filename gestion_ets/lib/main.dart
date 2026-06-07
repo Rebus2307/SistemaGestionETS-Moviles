@@ -5,7 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'injection_container.dart' as di;
 import 'presentation/auth/pages/login_page.dart';
 import 'presentation/search_ets/pages/search_page.dart';
-import 'core/theme/theme_cubit.dart'; // <-- NUEVO IMPORT DEL TEMA
+import 'core/theme/theme_cubit.dart';
+import 'core/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,20 +59,10 @@ class _GestionEtsAppState extends State<GestionEtsApp> {
             debugShowCheckedModeBanner: false,
 
             // TEMA CLARO
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF6200EE),
-              ),
-              useMaterial3: true,
-            ),
+            theme: AppTheme.light,
 
             // TEMA OSCURO
-            darkTheme: ThemeData.dark(useMaterial3: true).copyWith(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF6200EE),
-                brightness: Brightness.dark,
-              ),
-            ),
+            darkTheme: AppTheme.dark,
 
             // MODO ACTUAL (Controlado por el switch)
             themeMode: themeMode,

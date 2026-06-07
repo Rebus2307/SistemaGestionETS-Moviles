@@ -10,7 +10,6 @@ import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 
-// --- WIDGET PRINCIPAL ---
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
@@ -23,7 +22,6 @@ class LoginPage extends StatelessWidget {
   }
 }
 
-// --- VISTA REACTIVA ---
 class _LoginPageView extends StatefulWidget {
   const _LoginPageView();
 
@@ -31,16 +29,31 @@ class _LoginPageView extends StatefulWidget {
   State<_LoginPageView> createState() => _LoginPageViewState();
 }
 
-class _LoginPageViewState extends State<_LoginPageView> {
+class _LoginPageViewState extends State<_LoginPageView>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _ocultarPassword = true;
+  late final AnimationController _animController;
+  late final Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
+    _animController.forward();
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _animController.dispose();
     super.dispose();
   }
 
@@ -57,119 +70,145 @@ class _LoginPageViewState extends State<_LoginPageView> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Iniciar Sesión'), centerTitle: true),
-      body: BlocConsumer<AuthBloc, AuthState>(
-        listener: (context, state) {
-          if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Theme.of(context).colorScheme.error,
-              ),
-            );
-          } else if (state is AuthAuthenticated) {
-            _navigateByRole(context);
-          }
-        },
-        builder: (context, state) {
-          return Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Icon(
-                      Icons.lock_outline,
-                      size: 100,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      'Gestión ETS',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    // --- CAMPO DE EMAIL ---
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Correo Electrónico',
-                        prefixIcon: Icon(Icons.email),
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Por favor ingresa tu correo';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Por favor ingresa un correo válido';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    // --- CAMPO DE CONTRASEÑA ---
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _ocultarPassword,
-                      decoration: InputDecoration(
-                        labelText: 'Contraseña',
-                        prefixIcon: const Icon(Icons.lock),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _ocultarPassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [cs.surface, cs.primary.withValues(alpha: 0.08)],
+          ),
+        ),
+        child: BlocConsumer<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state is AuthError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: cs.error,
+                ),
+              );
+            } else if (state is AuthAuthenticated) {
+              _navigateByRole(context);
+            }
+          },
+          builder: (context, state) {
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Form(
+                  key: _formKey,
+                  child: FadeTransition(
+                    opacity: _fadeAnim,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Hero(
+                          tag: 'app_logo',
+                          child: Icon(
+                            Icons.school_outlined,
+                            size: 96,
+                            color: cs.primary,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _ocultarPassword = !_ocultarPassword;
-                            });
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Gestión ETS',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                            color: cs.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Inicia sesión para continuar',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: cs.secondary,
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(
+                            labelText: 'Correo Electrónico',
+                            prefixIcon: Icon(Icons.email_outlined),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor ingresa tu correo';
+                            }
+                            if (!value.contains('@')) {
+                              return 'Por favor ingresa un correo válido';
+                            }
+                            return null;
                           },
                         ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Por favor ingresa tu contraseña';
-                        }
-                        if (value.length < 6) {
-                          return 'La contraseña debe tener al menos 6 caracteres';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 32),
-                    // --- BOTÓN DE INICIAR SESIÓN ---
-                    SizedBox(
-                      height: 50,
-                      child: FilledButton(
-                        onPressed: state is AuthLoading ? null : _handleLogin,
-                        child: state is AuthLoading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : const Text(
-                                'Iniciar Sesión',
-                                style: TextStyle(fontSize: 16),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: _ocultarPassword,
+                          decoration: InputDecoration(
+                            labelText: 'Contraseña',
+                            prefixIcon: const Icon(Icons.lock_outlined),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _ocultarPassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
                               ),
-                      ),
+                              onPressed: () {
+                                setState(() {
+                                  _ocultarPassword = !_ocultarPassword;
+                                });
+                              },
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor ingresa tu contraseña';
+                            }
+                            if (value.length < 6) {
+                              return 'La contraseña debe tener al menos 6 caracteres';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          height: 52,
+                          child: FilledButton(
+                            onPressed: state is AuthLoading ? null : _handleLogin,
+                            child: state is AuthLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    'Iniciar Sesión',
+                                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                      color: cs.onPrimary,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -178,10 +217,7 @@ class _LoginPageViewState extends State<_LoginPageView> {
     try {
       final authRepository = sl<AuthRepository>();
       final user = await authRepository.getCurrentUser();
-
-      // --- SOLUCIÓN: Usamos context.mounted en lugar de mounted ---
       if (!context.mounted) return;
-
       if (user != null) {
         if (user.isAdmin) {
           Navigator.pushReplacement(
@@ -200,17 +236,13 @@ class _LoginPageViewState extends State<_LoginPageView> {
           );
         }
       } else {
-        // Si no obtiene el usuario, ir a SearchPage por defecto
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const SearchPage()),
         );
       }
     } catch (e) {
-      // --- SOLUCIÓN AQUÍ TAMBIÉN ---
       if (!context.mounted) return;
-
-      // Si hay error, simplemente ir a SearchPage
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const SearchPage()),
