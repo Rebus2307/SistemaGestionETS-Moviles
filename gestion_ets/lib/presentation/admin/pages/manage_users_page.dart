@@ -143,8 +143,11 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
       setState(() => _isLoading = true);
       try {
         String roleStr = 'alumno';
-        if (selectedRole == UserRole.profesorCoordinador) roleStr = 'profesor_coordinador';
-        else if (selectedRole == UserRole.administrador) roleStr = 'administrador';
+        if (selectedRole == UserRole.profesorCoordinador) {
+          roleStr = 'profesor_coordinador';
+        } else if (selectedRole == UserRole.administrador) {
+          roleStr = 'administrador';
+        }
         await _authRepository.updateUser(id: user.id, fullName: nameController.text.trim(), email: emailController.text.trim(), role: roleStr);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
