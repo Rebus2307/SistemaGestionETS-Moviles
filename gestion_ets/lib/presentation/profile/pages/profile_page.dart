@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_cubit.dart';
 
+import '../../auth/pages/login_page.dart';
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -394,11 +396,10 @@ class _LogoutRedirectState extends State<_LogoutRedirect> {
       await supabase.auth.signOut();
     } catch (_) {}
     if (!mounted) return;
-    Navigator.pushReplacement(
+    Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const Scaffold(
-        body: Center(child: Text('Sesión cerrada')),
-      )),
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
     );
   }
 
